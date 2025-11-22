@@ -418,6 +418,7 @@ const Index = () => {
         firstName={signerFirstName}
         lastName={signerLastName}
         existingSignature={currentField?.value || null}
+        isFilledField={currentField?.isFilled || false}
       />
 
       <ConsentModal
