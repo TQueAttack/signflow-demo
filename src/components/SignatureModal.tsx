@@ -74,13 +74,19 @@ export function SignatureModal({
   }, [open, firstName, lastName, existingSignature]);
 
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    setHasDrawn(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    // If there's an existing signature and user starts drawing, clear it
+    if (existingSignature && !hasDrawn) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    setIsDrawing(true);
+    setHasDrawn(true);
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -121,16 +127,17 @@ export function SignatureModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // If there's an existing signature, reload it
+    // Reload the original existing signature
     if (existingSignature && existingSignature.startsWith('data:image')) {
       const img = new Image();
       img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setHasDrawn(false); // Reset hasDrawn so button shows "Leave as is"
       };
       img.src = existingSignature;
     } else {
-      // Otherwise clear to transparent
+      // No existing signature, just clear
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       setHasDrawn(false);
     }
@@ -215,7 +222,7 @@ export function SignatureModal({
           <DialogDescription>
             Draw or type your {type === "signature" ? "signature" : "initials"}
           </DialogDescription>
-          {existingSignature && (
+          {existingSignature && !hasDrawn && (
             <Button
               variant="destructive"
               size="sm"
@@ -234,7 +241,7 @@ export function SignatureModal({
           </TabsList>
 
           <TabsContent value="draw" className="mt-4">
-            <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/10">
+            <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/10 relative">
               <canvas
                 ref={canvasRef}
                 width={550}
@@ -245,6 +252,15 @@ export function SignatureModal({
                 onPointerUp={stopDrawing}
                 onPointerLeave={stopDrawing}
               />
+              {existingSignature && hasDrawn && (
+                <button
+                  onClick={handleClear}
+                  className="absolute top-2 right-2 px-3 py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 shadow-lg text-sm font-medium"
+                  title="Revert to original signature"
+                >
+                  Restore original
+                </button>
+              )}
             </div>
           </TabsContent>
 
