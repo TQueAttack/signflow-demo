@@ -38,12 +38,14 @@ export function SignatureModal({
   const [typedFirstName, setTypedFirstName] = useState("");
   const [typedLastName, setTypedLastName] = useState("");
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [hasCleared, setHasCleared] = useState(false); // Track if we've cleared existing signature
 
   useEffect(() => {
     if (open) {
       // Pre-fill with server data if available
       setTypedFirstName(firstName);
       setTypedLastName(lastName);
+      setHasCleared(false); // Reset on open
       
       const canvas = canvasRef.current;
       if (canvas) {
@@ -80,8 +82,11 @@ export function SignatureModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear canvas when starting to draw (whether there's existing signature or not)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // First tap on canvas with existing signature: clear it once
+    if (existingSignature && !hasCleared) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      setHasCleared(true);
+    }
 
     setIsDrawing(true);
     setHasDrawn(true);
