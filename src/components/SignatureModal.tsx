@@ -21,6 +21,7 @@ interface SignatureModalProps {
   firstName?: string;
   lastName?: string;
   existingSignature?: string | null;
+  isFilledField?: boolean;
 }
 
 export function SignatureModal({
@@ -31,6 +32,7 @@ export function SignatureModal({
   firstName = "",
   lastName = "",
   existingSignature = null,
+  isFilledField = false,
 }: SignatureModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -38,42 +40,38 @@ export function SignatureModal({
   const [typedFirstName, setTypedFirstName] = useState("");
   const [typedLastName, setTypedLastName] = useState("");
   const [hasDrawn, setHasDrawn] = useState(false);
-  const [hasCleared, setHasCleared] = useState(false); // Track if we've cleared existing signature
+  const [hasCleared, setHasCleared] = useState(false);
 
   useEffect(() => {
     if (open) {
-      // Pre-fill with server data if available
       setTypedFirstName(firstName);
       setTypedLastName(lastName);
-      setHasCleared(false); // Reset on open
+      setHasCleared(false);
+      setHasDrawn(false);
       
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          // Clear canvas first
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           
-          // If editing existing signature, load it onto canvas
-          if (existingSignature && existingSignature.startsWith('data:image')) {
+          // State B: Filled field - load existing signature
+          if (isFilledField && existingSignature && existingSignature.startsWith('data:image')) {
             const img = new Image();
             img.onload = () => {
               ctx.clearRect(0, 0, canvas.width, canvas.height);
               ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              setHasDrawn(true);
             };
             img.onerror = () => {
               console.error('Failed to load existing signature');
-              setHasDrawn(false);
             };
             img.src = existingSignature;
-          } else {
-            setHasDrawn(false);
           }
+          // State A: Empty field - canvas stays blank
         }
       }
     }
-  }, [open, firstName, lastName, existingSignature]);
+  }, [open, firstName, lastName, existingSignature, isFilledField]);
 
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -82,18 +80,19 @@ export function SignatureModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // First tap on canvas with existing signature: clear it once
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // CRITICAL: First touch on filled field - erase and start drawing in one gesture
     if (existingSignature && !hasCleared) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       setHasCleared(true);
     }
 
+    // Start drawing from the exact touch point (whether cleared or not)
     setIsDrawing(true);
     setHasDrawn(true);
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -213,7 +212,7 @@ export function SignatureModal({
           <DialogDescription>
             Draw or type your {type === "signature" ? "signature" : "initials"}
           </DialogDescription>
-          {existingSignature && (
+          {isFilledField && (
             <Button
               variant="destructive"
               size="sm"
