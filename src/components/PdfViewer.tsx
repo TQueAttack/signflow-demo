@@ -12,8 +12,9 @@ interface PdfViewerProps {
   onFieldMove?: (fieldId: string, x: number, y: number, page: number) => void;
   onFieldDelete?: (fieldId: string) => void;
   onFieldTypeChange?: (fieldId: string, type: "signature" | "initial") => void;
-  onAddField?: (x: number, y: number, page: number) => void;
+  onAddField?: (x: number, y: number, page: number, type: "signature" | "initial") => void;
   highlightedFieldId?: string;
+  selectedFieldType?: "signature" | "initial" | null;
 }
 
 export function PdfViewer({
@@ -26,6 +27,7 @@ export function PdfViewer({
   onFieldTypeChange,
   onAddField,
   highlightedFieldId,
+  selectedFieldType,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<Array<{ width: number; height: number }>>([]);
   const canvasRefs = useRef<HTMLCanvasElement[]>([]);
@@ -52,18 +54,18 @@ export function PdfViewer({
     renderPages();
   }, [pdf]);
 
-  const handlePageLongPress = (
-    e: React.PointerEvent<HTMLDivElement>,
+  const handlePageClick = (
+    e: React.MouseEvent<HTMLDivElement>,
     pageIndex: number
   ) => {
-    if (mode !== "editor" || !onAddField) return;
+    if (mode !== "editor" || !onAddField || !selectedFieldType) return;
 
     const target = e.currentTarget;
     const rect = target.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    onAddField(x, y, pageIndex + 1);
+    onAddField(x, y, pageIndex + 1, selectedFieldType);
   };
 
   if (!pdf) {
@@ -98,10 +100,11 @@ export function PdfViewer({
             onFieldMove={onFieldMove}
             onFieldDelete={onFieldDelete}
             onFieldTypeChange={onFieldTypeChange}
-            onLongPress={(e) => handlePageLongPress(e, i)}
+            onPageClick={(e) => handlePageClick(e, i)}
             pageWidth={pages[i]?.width || 0}
             pageHeight={pages[i]?.height || 0}
             highlightedFieldId={highlightedFieldId}
+            isPlacingField={mode === "editor" && selectedFieldType !== null}
           />
         </div>
       ))}

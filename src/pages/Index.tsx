@@ -8,7 +8,7 @@ import { ConsentModal } from "@/components/ConsentModal";
 import { CompletionModal } from "@/components/CompletionModal";
 import { EditorToolbar } from "@/components/EditorToolbar";
 import { Button } from "@/components/ui/button";
-import { AppMode, SignatureField, DocumentLayout, CompletionData } from "@/types/document";
+import { AppMode, SignatureField, DocumentLayout, CompletionData, FieldType } from "@/types/document";
 import { loadPdfDocument } from "@/utils/pdfUtils";
 import { saveLayout, loadLayout } from "@/utils/layoutUtils";
 import { exportSignedPdf } from "@/utils/pdfExport";
@@ -27,6 +27,7 @@ const Index = () => {
   const [consentGiven, setConsentGiven] = useState(false);
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,19 +59,19 @@ const Index = () => {
     }
   };
 
-  const handleAddField = (x: number, y: number, page: number) => {
+  const handleAddField = (x: number, y: number, page: number, type: FieldType) => {
     const newField: SignatureField = {
       id: uuidv4(),
-      type: "signature",
+      type,
       page,
       x,
       y,
-      width: 180,
-      height: 50,
+      width: type === "signature" ? 180 : 120,
+      height: type === "signature" ? 50 : 40,
       isFilled: false,
     };
     setFields([...fields, newField]);
-    toast.success("Field added! Drag to move, tap X to delete");
+    toast.success(`${type === "signature" ? "Signature" : "Initial"} field added!`);
   };
 
   const handleFieldMove = (fieldId: string, x: number, y: number, page: number) => {
@@ -239,6 +240,8 @@ const Index = () => {
               <EditorToolbar
                 onSave={handleSaveLayout}
                 onLoadLayout={handleLoadLayout}
+                selectedFieldType={selectedFieldType}
+                onFieldTypeSelect={setSelectedFieldType}
               />
             )}
 
@@ -253,6 +256,7 @@ const Index = () => {
                 onFieldTypeChange={handleFieldTypeChange}
                 onAddField={handleAddField}
                 highlightedFieldId={highlightedFieldId}
+                selectedFieldType={selectedFieldType}
               />
             </div>
           </div>
