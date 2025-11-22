@@ -120,18 +120,18 @@ export function SignatureFieldBox({
       ? "border-field-signature"
       : field.type === "initial"
       ? "border-field-initial"
-      : mode === "signing"
+      : mode === "editor"
       ? "border-blue-500"
-      : "border-primary";
+      : "border-border";
 
   const bgColor =
     field.type === "signature"
       ? "bg-field-signature/10"
       : field.type === "initial"
       ? "bg-field-initial/10"
-      : mode === "signing"
+      : mode === "editor"
       ? "bg-blue-50"
-      : "bg-primary/10";
+      : "bg-background";
 
   const fieldContent = (
     <div
