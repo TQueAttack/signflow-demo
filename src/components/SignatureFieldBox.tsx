@@ -161,40 +161,37 @@ export function SignatureFieldBox({
       onPointerCancel={handlePointerUp}
     >
       {/* In editor mode, never show filled signatures - always show controls */}
-      {mode === "editor" || (field.type === "date" && field.value) ? (
-        <>
-          {field.type === "date" && field.value ? (
-            <div className="text-sm font-medium text-foreground px-2">
-              {field.value}
-            </div>
-          ) : null}
-          {mode === "editor" && (
-            <div className="flex items-center gap-2 px-2 w-full" onClick={(e) => e.stopPropagation()}>
-              <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium flex-1">
-                {field.type === "signature" ? "Signature" : field.type === "initial" ? "Initial" : "Date"}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete?.(field.id);
-                }}
-                className="h-6 w-6 rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center flex-shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </>
+      {mode === "editor" ? (
+        /* Editor mode: show controls */
+        <div className="flex items-center gap-2 px-2 w-full" onClick={(e) => e.stopPropagation()}>
+          <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-xs font-medium flex-1">
+            {field.type === "signature" ? "Signature" : field.type === "initial" ? "Initial" : "Date"}
+          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.(field.id);
+            }}
+            className="h-6 w-6 rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center flex-shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : field.type === "date" && field.value ? (
+        /* Signing mode: date field with value */
+        <div className="text-sm font-medium text-foreground px-2 text-center">
+          {field.value}
+        </div>
       ) : field.isFilled && field.value ? (
-        /* In signing mode, show the filled signature/initial */
+        /* Signing mode: show the filled signature/initial */
         <img
           src={field.value}
           alt={field.type}
           className="w-full h-full object-contain p-1 cursor-pointer"
         />
       ) : (
-        /* In signing mode, unfilled field */
+        /* Signing mode: unfilled field */
         <>
           {!field.isFilled && field.type !== "date" && (
             <div className="flex items-center gap-1.5">
