@@ -26,6 +26,7 @@ const Index = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,14 +34,27 @@ const Index = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.includes("pdf")) {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+
+    setIsLoadingPdf(true);
+    console.log("Starting PDF upload...", file.name);
+
     try {
+      console.log("Loading PDF document...");
       const pdfDoc = await loadPdfDocument(file);
+      console.log("PDF loaded successfully, pages:", pdfDoc.numPages);
+      
       setPdf(pdfDoc);
       setPdfUrl(URL.createObjectURL(file));
-      toast.success("PDF loaded successfully!");
+      toast.success(`PDF loaded! ${pdfDoc.numPages} page(s)`);
     } catch (error) {
       console.error("Error loading PDF:", error);
-      toast.error("Failed to load PDF");
+      toast.error(`Failed to load PDF: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsLoadingPdf(false);
     }
   };
 
@@ -208,9 +222,14 @@ const Index = () => {
                 accept=".pdf"
                 onChange={handleFileUpload}
                 className="hidden"
+                disabled={isLoadingPdf}
               />
-              <Button onClick={() => fileInputRef.current?.click()} size="lg">
-                Choose PDF File
+              <Button 
+                onClick={() => fileInputRef.current?.click()} 
+                size="lg"
+                disabled={isLoadingPdf}
+              >
+                {isLoadingPdf ? "Loading PDF..." : "Choose PDF File"}
               </Button>
             </div>
           </div>
