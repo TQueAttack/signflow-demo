@@ -184,9 +184,8 @@ const Index = () => {
         return;
       }
       
-      // First time signing
+      // First time signing - check if we have saved value to auto-apply
       if (!field.isFilled) {
-        // Check if we have a saved signature/initial for this type
         const savedValue = field.type === "signature" ? savedSignature : savedInitial;
         
         if (savedValue) {
@@ -225,10 +224,19 @@ const Index = () => {
       setSavedInitial(imageData);
     }
 
-    // Apply to ALL fields of the same type (editing updates all)
+    // If editing an existing signature, only update fields of the same type that are already filled
+    // If applying for the first time, update the current field
     const updatedFields = fields.map((f) => {
-      if (f.type === currentField.type && f.type !== "date") {
-        return { ...f, value: imageData, isFilled: true };
+      if (currentField.isFilled) {
+        // Editing mode: update all filled fields of the same type
+        if (f.type === currentField.type && f.type !== "date" && f.isFilled) {
+          return { ...f, value: imageData };
+        }
+      } else {
+        // First application: only update the current field
+        if (f.id === currentField.id) {
+          return { ...f, value: imageData, isFilled: true };
+        }
       }
       return f;
     });
@@ -236,8 +244,10 @@ const Index = () => {
     setShowSignatureModal(false);
     setCurrentField(null);
 
-    // Immediate scroll to next unfilled field
-    scrollToNextField(updatedFields);
+    // Immediate scroll to next unfilled field (only if not editing)
+    if (!currentField.isFilled) {
+      scrollToNextField(updatedFields);
+    }
   };
 
   const scrollToNextField = (fieldsToCheck: SignatureField[] = fields) => {
@@ -354,12 +364,14 @@ const Index = () => {
         ) : (
           <div className="space-y-6">
             {mode === "editor" && (
-              <EditorToolbar
-                onSave={handleSaveLayout}
-                onLoadLayout={handleLoadLayout}
-                selectedFieldType={selectedFieldType}
-                onFieldTypeSelect={setSelectedFieldType}
-              />
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b pb-4">
+                <EditorToolbar
+                  onSave={handleSaveLayout}
+                  onLoadLayout={handleLoadLayout}
+                  selectedFieldType={selectedFieldType}
+                  onFieldTypeSelect={setSelectedFieldType}
+                />
+              </div>
             )}
 
             <div className="bg-muted/30 rounded-lg p-8">
@@ -392,6 +404,7 @@ const Index = () => {
         onApply={handleSignatureApply}
         firstName={signerFirstName}
         lastName={signerLastName}
+        existingSignature={currentField?.value || null}
       />
 
       <ConsentModal
