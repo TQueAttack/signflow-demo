@@ -63,6 +63,11 @@ const Index = () => {
   };
 
   const handleAddField = (x: number, y: number, page: number, type: FieldType) => {
+    const today = new Date();
+    const dateValue = type === "date" 
+      ? `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`
+      : undefined;
+    
     const newField: SignatureField = {
       id: uuidv4(),
       type,
@@ -72,7 +77,7 @@ const Index = () => {
       width: type === "signature" ? 180 : type === "initial" ? 120 : 150,
       height: type === "signature" ? 50 : type === "initial" ? 40 : 35,
       isFilled: type === "date",
-      value: type === "date" ? new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
+      value: dateValue,
     };
     setFields([...fields, newField]);
   };
@@ -94,13 +99,15 @@ const Index = () => {
       if (f.id === fieldId) {
         // When changing to date, auto-fill it
         if (type === "date") {
+          const today = new Date();
+          const dateValue = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
           return {
             ...f,
             type,
             width: 150,
             height: 35,
             isFilled: true,
-            value: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            value: dateValue
           };
         }
         // When changing from date to other types, reset
@@ -146,9 +153,10 @@ const Index = () => {
       }
       // Auto-fill date fields when entering signing mode
       if (newMode === "signing") {
-        const todayDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const today = new Date();
+        const dateValue = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
         setFields(fields.map(f => 
-          f.type === "date" ? { ...f, isFilled: true, value: todayDate } : f
+          f.type === "date" ? { ...f, isFilled: true, value: dateValue } : f
         ));
       }
     }
