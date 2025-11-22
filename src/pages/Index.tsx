@@ -30,6 +30,7 @@ const Index = () => {
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null);
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [savedInitial, setSavedInitial] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,7 +74,6 @@ const Index = () => {
       isFilled: false,
     };
     setFields([...fields, newField]);
-    toast.success(`${type === "signature" ? "Signature" : "Initial"} field added!`);
   };
 
   const handleFieldMove = (fieldId: string, x: number, y: number, page: number) => {
@@ -85,7 +85,6 @@ const Index = () => {
   const handleFieldDelete = (fieldId: string) => {
     if (window.confirm("Delete this field?")) {
       setFields(fields.filter((f) => f.id !== fieldId));
-      toast.success("Field deleted");
     }
   };
 
@@ -136,6 +135,9 @@ const Index = () => {
       const savedValue = field.type === "signature" ? savedSignature : savedInitial;
       
       if (savedValue) {
+        // Show brief processing indicator
+        setIsProcessing(true);
+        
         // Auto-apply the saved signature
         const updatedFields = fields.map((f) =>
           f.id === field.id
@@ -143,12 +145,12 @@ const Index = () => {
             : f
         );
         setFields(updatedFields);
-        toast.success(`${field.type === "signature" ? "Signature" : "Initial"} applied!`);
         
-        // Auto-scroll to next field after a short delay
-        setTimeout(() => {
-          scrollToNextField(updatedFields);
-        }, 500);
+        // Immediate scroll to next field
+        scrollToNextField(updatedFields);
+        
+        // Clear processing indicator
+        setTimeout(() => setIsProcessing(false), 300);
       } else {
         // First time signing, open modal
         setCurrentField(field);
@@ -176,16 +178,9 @@ const Index = () => {
     setFields(updatedFields);
     setShowSignatureModal(false);
     setCurrentField(null);
-    
-    const fieldType = currentField.type;
-    toast.success(
-      `${fieldType === "signature" ? "Signature" : "Initial"} saved! It will be applied to all remaining ${fieldType} fields.`
-    );
 
-    // Auto-scroll to next unfilled field after a short delay
-    setTimeout(() => {
-      scrollToNextField(updatedFields);
-    }, 500);
+    // Immediate scroll to next unfilled field
+    scrollToNextField(updatedFields);
   };
 
   const scrollToNextField = (fieldsToCheck: SignatureField[] = fields) => {
@@ -193,8 +188,8 @@ const Index = () => {
     if (nextField) {
       setHighlightedFieldId(nextField.id);
       
-      // Find the field element and scroll to it
-      setTimeout(() => {
+      // Find the field element and scroll to it immediately
+      requestAnimationFrame(() => {
         const fieldElements = document.querySelectorAll('[data-field-id]');
         const targetElement = Array.from(fieldElements).find(
           (el) => el.getAttribute('data-field-id') === nextField.id
@@ -210,8 +205,8 @@ const Index = () => {
         // Clear highlight after animation
         setTimeout(() => {
           setHighlightedFieldId(undefined);
-        }, 2000);
-      }, 100);
+        }, 1500);
+      });
     }
   };
 
@@ -268,6 +263,7 @@ const Index = () => {
         onComplete={handleComplete}
         hasSavedSignature={savedSignature !== null}
         hasSavedInitial={savedInitial !== null}
+        isProcessing={isProcessing}
       />
 
       <main className="container mx-auto px-4 py-8">

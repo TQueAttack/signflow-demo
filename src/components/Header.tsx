@@ -1,6 +1,6 @@
 import { AppMode } from "@/types/document";
 import { Button } from "@/components/ui/button";
-import { FileText, Edit, PenTool, CheckCircle2 } from "lucide-react";
+import { FileText, Edit, PenTool, CheckCircle2, Loader2 } from "lucide-react";
 
 interface HeaderProps {
   mode: AppMode;
@@ -12,6 +12,7 @@ interface HeaderProps {
   onComplete?: () => void;
   hasSavedSignature?: boolean;
   hasSavedInitial?: boolean;
+  isProcessing?: boolean;
 }
 
 export function Header({
@@ -24,6 +25,7 @@ export function Header({
   onComplete,
   hasSavedSignature = false,
   hasSavedInitial = false,
+  isProcessing = false,
 }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
@@ -31,6 +33,12 @@ export function Header({
         <div className="flex items-center gap-3">
           <FileText className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-semibold text-foreground">DocuSign Demo</h1>
+          {isProcessing && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground ml-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Processing...</span>
+            </div>
+          )}
         </div>
 
         {mode === "signing" && (
