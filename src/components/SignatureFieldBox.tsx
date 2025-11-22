@@ -83,13 +83,14 @@ export function SignatureFieldBox({
 
   const fieldContent = (
     <div
+      data-field-id={field.id}
       className={cn(
         "absolute pointer-events-auto transition-all duration-200 border-2 rounded flex items-center justify-center",
         borderColor,
         bgColor,
         isDragging && "cursor-move opacity-70",
         mode === "signing" && !field.isFilled && "cursor-pointer hover:border-field-hover hover:shadow-lg",
-        isHighlighted && "ring-4 ring-accent/50 animate-pulse",
+        isHighlighted && "ring-4 ring-accent/50 animate-pulse scale-105",
         field.isFilled && "bg-background"
       )}
       style={{
