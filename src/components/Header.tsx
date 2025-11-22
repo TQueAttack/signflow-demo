@@ -1,6 +1,6 @@
 import { AppMode } from "@/types/document";
 import { Button } from "@/components/ui/button";
-import { FileText, Edit, PenTool } from "lucide-react";
+import { FileText, Edit, PenTool, CheckCircle2 } from "lucide-react";
 
 interface HeaderProps {
   mode: AppMode;
@@ -10,6 +10,8 @@ interface HeaderProps {
   onNextSignature?: () => void;
   allFieldsFilled?: boolean;
   onComplete?: () => void;
+  hasSavedSignature?: boolean;
+  hasSavedInitial?: boolean;
 }
 
 export function Header({
@@ -20,6 +22,8 @@ export function Header({
   onNextSignature,
   allFieldsFilled = false,
   onComplete,
+  hasSavedSignature = false,
+  hasSavedInitial = false,
 }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
@@ -31,10 +35,20 @@ export function Header({
 
         {mode === "signing" && (
           <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium">Signatures:</span> {signaturesRemaining}
-              {" | "}
-              <span className="font-medium">Initials:</span> {initialsRemaining}
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-1.5">
+                {hasSavedSignature && <CheckCircle2 className="h-4 w-4 text-success" />}
+                <span className="text-muted-foreground">
+                  <span className="font-medium">Signatures:</span> {signaturesRemaining}
+                </span>
+              </div>
+              <span className="text-border">|</span>
+              <div className="flex items-center gap-1.5">
+                {hasSavedInitial && <CheckCircle2 className="h-4 w-4 text-success" />}
+                <span className="text-muted-foreground">
+                  <span className="font-medium">Initials:</span> {initialsRemaining}
+                </span>
+              </div>
             </div>
             {allFieldsFilled ? (
               <Button onClick={onComplete} className="bg-success hover:bg-success/90">

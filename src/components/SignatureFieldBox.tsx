@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { SignatureField } from "@/types/document";
-import { X } from "lucide-react";
+import { X, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -9,6 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SignatureFieldBoxProps {
   field: SignatureField;
@@ -18,6 +24,7 @@ interface SignatureFieldBoxProps {
   onDelete?: (fieldId: string) => void;
   onTypeChange?: (fieldId: string, type: "signature" | "initial") => void;
   isHighlighted?: boolean;
+  hasSavedValue?: boolean;
 }
 
 export function SignatureFieldBox({
@@ -28,6 +35,7 @@ export function SignatureFieldBox({
   onDelete,
   onTypeChange,
   isHighlighted = false,
+  hasSavedValue = false,
 }: SignatureFieldBoxProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -73,14 +81,14 @@ export function SignatureFieldBox({
       ? "bg-field-signature/10"
       : "bg-field-initial/10";
 
-  return (
+  const fieldContent = (
     <div
       className={cn(
         "absolute pointer-events-auto transition-all duration-200 border-2 rounded flex items-center justify-center",
         borderColor,
         bgColor,
         isDragging && "cursor-move opacity-70",
-        mode === "signing" && !field.isFilled && "cursor-pointer hover:border-field-hover",
+        mode === "signing" && !field.isFilled && "cursor-pointer hover:border-field-hover hover:shadow-lg",
         isHighlighted && "ring-4 ring-accent/50 animate-pulse",
         field.isFilled && "bg-background"
       )}
@@ -131,12 +139,30 @@ export function SignatureFieldBox({
             </div>
           )}
           {mode === "signing" && !field.isFilled && (
-            <span className="text-xs font-medium text-muted-foreground">
-              Click to {field.type}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {hasSavedValue && <CheckCircle2 className="h-3.5 w-3.5 text-success" />}
+              <span className="text-xs font-medium text-muted-foreground">
+                {hasSavedValue ? "Click to apply" : `Click to ${field.type}`}
+              </span>
+            </div>
           )}
         </>
       )}
     </div>
   );
+
+  if (mode === "signing" && !field.isFilled && hasSavedValue) {
+    return (
+      <TooltipProvider>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>{fieldContent}</TooltipTrigger>
+          <TooltipContent>
+            <p>Your {field.type} will be automatically applied</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return fieldContent;
 }

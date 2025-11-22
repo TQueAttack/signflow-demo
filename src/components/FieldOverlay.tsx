@@ -13,6 +13,8 @@ interface FieldOverlayProps {
   pageHeight: number;
   highlightedFieldId?: string;
   isPlacingField?: boolean;
+  hasSavedSignature?: boolean;
+  hasSavedInitial?: boolean;
 }
 
 export function FieldOverlay({
@@ -27,6 +29,8 @@ export function FieldOverlay({
   pageHeight,
   highlightedFieldId,
   isPlacingField = false,
+  hasSavedSignature = false,
+  hasSavedInitial = false,
 }: FieldOverlayProps) {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Only handle clicks on the overlay itself, not on fields
@@ -51,6 +55,9 @@ export function FieldOverlay({
           onDelete={onFieldDelete}
           onTypeChange={onFieldTypeChange}
           isHighlighted={highlightedFieldId === field.id}
+          hasSavedValue={
+            field.type === "signature" ? hasSavedSignature : hasSavedInitial
+          }
         />
       ))}
     </div>
