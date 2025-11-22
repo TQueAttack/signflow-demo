@@ -40,7 +40,18 @@ export async function exportSignedPdf(
     );
 
     for (const field of pageFields) {
-      if (field.value) {
+      if (field.type === "date" && field.value) {
+        // Render date as text
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text(
+          field.value,
+          field.x * 0.75 + (field.width * 0.75) / 2,
+          field.y * 0.75 + (field.height * 0.75) / 2,
+          { align: "center", baseline: "middle" }
+        );
+      } else if (field.value && field.value.startsWith('data:image')) {
+        // Render signature/initial as image
         doc.addImage(
           field.value,
           "PNG",
