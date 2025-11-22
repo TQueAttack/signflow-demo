@@ -151,10 +151,11 @@ const Index = () => {
       setShowConsentModal(true);
     } else {
       setMode(newMode);
-      // Reset saved signatures when switching modes
+      // Reset saved signatures when switching to editor
       if (newMode === "editor") {
         setSavedSignature(null);
         setSavedInitial(null);
+        // Keep field values but they won't be displayed in editor mode
       }
       // Auto-fill date fields when entering signing mode
       if (newMode === "signing") {
@@ -175,31 +176,41 @@ const Index = () => {
   };
 
   const handleFieldClick = (field: SignatureField) => {
-    if (mode === "signing" && !field.isFilled) {
-      // Check if we have a saved signature/initial for this type
-      const savedValue = field.type === "signature" ? savedSignature : savedInitial;
-      
-      if (savedValue) {
-        // Show brief processing indicator
-        setIsProcessing(true);
-        
-        // Auto-apply the saved signature
-        const updatedFields = fields.map((f) =>
-          f.id === field.id
-            ? { ...f, value: savedValue, isFilled: true }
-            : f
-        );
-        setFields(updatedFields);
-        
-        // Immediate scroll to next field
-        scrollToNextField(updatedFields);
-        
-        // Clear processing indicator
-        setTimeout(() => setIsProcessing(false), 300);
-      } else {
-        // First time signing, open modal
+    if (mode === "signing") {
+      // Allow editing already filled fields
+      if (field.isFilled && field.type !== "date") {
         setCurrentField(field);
         setShowSignatureModal(true);
+        return;
+      }
+      
+      // First time signing
+      if (!field.isFilled) {
+        // Check if we have a saved signature/initial for this type
+        const savedValue = field.type === "signature" ? savedSignature : savedInitial;
+        
+        if (savedValue) {
+          // Show brief processing indicator
+          setIsProcessing(true);
+          
+          // Auto-apply the saved signature
+          const updatedFields = fields.map((f) =>
+            f.id === field.id
+              ? { ...f, value: savedValue, isFilled: true }
+              : f
+          );
+          setFields(updatedFields);
+          
+          // Immediate scroll to next field
+          scrollToNextField(updatedFields);
+          
+          // Clear processing indicator
+          setTimeout(() => setIsProcessing(false), 300);
+        } else {
+          // First time signing, open modal
+          setCurrentField(field);
+          setShowSignatureModal(true);
+        }
       }
     }
   };
@@ -214,12 +225,13 @@ const Index = () => {
       setSavedInitial(imageData);
     }
 
-    // Apply to current field
-    const updatedFields = fields.map((f) =>
-      f.id === currentField.id
-        ? { ...f, value: imageData, isFilled: true }
-        : f
-    );
+    // Apply to ALL fields of the same type (editing updates all)
+    const updatedFields = fields.map((f) => {
+      if (f.type === currentField.type && f.type !== "date") {
+        return { ...f, value: imageData, isFilled: true };
+      }
+      return f;
+    });
     setFields(updatedFields);
     setShowSignatureModal(false);
     setCurrentField(null);

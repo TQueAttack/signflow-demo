@@ -68,7 +68,8 @@ export function SignatureFieldBox({
       
       setIsDragging(true);
       setHasMoved(false);
-    } else if (mode === "signing" && !field.isFilled) {
+    } else if (mode === "signing") {
+      // Allow clicking on filled or unfilled fields in signing mode
       onClick?.();
     }
   };
@@ -145,7 +146,7 @@ export function SignatureFieldBox({
         bgColor,
         mode === "editor" && "cursor-move hover:shadow-lg hover:border-field-hover transition-shadow",
         isDragging && "opacity-70 scale-105 shadow-2xl z-50 transition-none",
-        mode === "signing" && !field.isFilled && "cursor-pointer hover:border-field-hover hover:shadow-lg",
+        mode === "signing" && "cursor-pointer hover:border-field-hover hover:shadow-lg",
         isHighlighted && "ring-4 ring-accent/50 animate-pulse scale-105"
       )}
       style={{
@@ -159,18 +160,14 @@ export function SignatureFieldBox({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
-      {field.type === "date" && field.value ? (
-        <div className="text-sm font-medium text-foreground px-2">
-          {field.value}
-        </div>
-      ) : field.isFilled && field.value ? (
-        <img
-          src={field.value}
-          alt="Signature"
-          className="w-full h-full object-contain p-1"
-        />
-      ) : (
+      {/* In editor mode, never show filled signatures - always show controls */}
+      {mode === "editor" || (field.type === "date" && field.value) ? (
         <>
+          {field.type === "date" && field.value ? (
+            <div className="text-sm font-medium text-foreground px-2">
+              {field.value}
+            </div>
+          ) : null}
           {mode === "editor" && (
             <div className="flex items-center gap-2 px-2 w-full" onClick={(e) => e.stopPropagation()}>
               <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -200,7 +197,18 @@ export function SignatureFieldBox({
               </button>
             </div>
           )}
-          {mode === "signing" && !field.isFilled && field.type !== "date" && (
+        </>
+      ) : field.isFilled && field.value ? (
+        /* In signing mode, show the filled signature/initial */
+        <img
+          src={field.value}
+          alt={field.type}
+          className="w-full h-full object-contain p-1 cursor-pointer"
+        />
+      ) : (
+        /* In signing mode, unfilled field */
+        <>
+          {!field.isFilled && field.type !== "date" && (
             <div className="flex items-center gap-1.5">
               {hasSavedValue && <CheckCircle2 className="h-3.5 w-3.5 text-success" />}
               <span className="text-xs font-medium text-muted-foreground">
