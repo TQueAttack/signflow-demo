@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { SignatureField } from "@/types/document";
-import { X, CheckCircle2 } from "lucide-react";
+import { X, CheckCircle2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -39,36 +39,51 @@ export function SignatureFieldBox({
 }: SignatureFieldBoxProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const dragTimerRef = useRef<number | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (mode === "editor" && onMove) {
-      e.stopPropagation();
-      // Start long-press timer for drag
-      dragTimerRef.current = window.setTimeout(() => {
-        setIsDragging(true);
-        setDragStart({ x: e.clientX - field.x, y: e.clientY - field.y });
-      }, 600);
+      // Don't start drag if clicking on Select dropdown or delete button
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('[role="combobox"]')) {
+        return;
+      }
+
+      e.stopPropagation(); // Prevent triggering page click
+      
+      // Start dragging immediately in editor mode
+      setIsDragging(true);
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      setDragStart({ x: e.clientX, y: e.clientY });
     } else if (mode === "signing" && !field.isFilled) {
       onClick?.();
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (isDragging && onMove) {
+    if (isDragging && onMove && mode === "editor") {
       e.preventDefault();
-      const newX = Math.max(0, e.clientX - dragStart.x);
-      const newY = Math.max(0, e.clientY - dragStart.y);
-      onMove(field.id, newX, newY, field.page);
+      e.stopPropagation();
+      
+      // Calculate new position based on pointer location minus the offset
+      const parentRect = e.currentTarget.parentElement?.getBoundingClientRect();
+      if (parentRect) {
+        const newX = Math.max(0, Math.min(e.clientX - parentRect.left - dragOffset.x, parentRect.width - field.width));
+        const newY = Math.max(0, Math.min(e.clientY - parentRect.top - dragOffset.y, parentRect.height - field.height));
+        onMove(field.id, newX, newY, field.page);
+      }
     }
   };
 
-  const handlePointerUp = () => {
-    if (dragTimerRef.current) {
-      clearTimeout(dragTimerRef.current);
-      dragTimerRef.current = null;
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDragging) {
+      e.stopPropagation();
+      setIsDragging(false);
     }
-    setIsDragging(false);
   };
 
   const borderColor =
@@ -88,7 +103,8 @@ export function SignatureFieldBox({
         "absolute pointer-events-auto transition-all duration-200 border-2 rounded flex items-center justify-center",
         borderColor,
         bgColor,
-        isDragging && "cursor-move opacity-70",
+        mode === "editor" && "cursor-move hover:shadow-lg hover:border-field-hover",
+        isDragging && "opacity-70 scale-105 shadow-2xl z-50",
         mode === "signing" && !field.isFilled && "cursor-pointer hover:border-field-hover hover:shadow-lg",
         isHighlighted && "ring-4 ring-accent/50 animate-pulse scale-105",
         field.isFilled && "bg-background"
@@ -113,14 +129,15 @@ export function SignatureFieldBox({
       ) : (
         <>
           {mode === "editor" && (
-            <div className="flex items-center gap-2 px-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 px-2 w-full" onClick={(e) => e.stopPropagation()}>
+              <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <Select
                 value={field.type}
                 onValueChange={(value) =>
                   onTypeChange?.(field.id, value as "signature" | "initial")
                 }
               >
-                <SelectTrigger className="h-7 text-xs border-none bg-transparent">
+                <SelectTrigger className="h-7 text-xs border-none bg-transparent flex-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -133,7 +150,7 @@ export function SignatureFieldBox({
                   e.stopPropagation();
                   onDelete?.(field.id);
                 }}
-                className="h-6 w-6 rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center"
+                className="h-6 w-6 rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center flex-shrink-0"
               >
                 <X className="h-4 w-4" />
               </button>
