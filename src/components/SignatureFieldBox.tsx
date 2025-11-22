@@ -120,6 +120,8 @@ export function SignatureFieldBox({
       ? "border-field-signature"
       : field.type === "initial"
       ? "border-field-initial"
+      : mode === "signing"
+      ? "border-blue-500"
       : "border-primary";
 
   const bgColor =
@@ -127,6 +129,8 @@ export function SignatureFieldBox({
       ? "bg-field-signature/10"
       : field.type === "initial"
       ? "bg-field-initial/10"
+      : mode === "signing"
+      ? "bg-blue-50"
       : "bg-primary/10";
 
   const fieldContent = (
