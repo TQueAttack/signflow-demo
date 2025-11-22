@@ -45,19 +45,24 @@ export function SignatureModal({
       setTypedFirstName(firstName);
       setTypedLastName(lastName);
       
-      if (canvasRef.current) {
-        const canvas = canvasRef.current;
+      const canvas = canvasRef.current;
+      if (canvas) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          // Transparent background
+          // Clear canvas first
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           
           // If editing existing signature, load it onto canvas
-          if (existingSignature) {
+          if (existingSignature && existingSignature.startsWith('data:image')) {
             const img = new Image();
             img.onload = () => {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
               ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
               setHasDrawn(true);
+            };
+            img.onerror = () => {
+              console.error('Failed to load existing signature');
+              setHasDrawn(false);
             };
             img.src = existingSignature;
           } else {
@@ -116,9 +121,19 @@ export function SignatureModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear to transparent
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasDrawn(false);
+    // If there's an existing signature, reload it
+    if (existingSignature && existingSignature.startsWith('data:image')) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = existingSignature;
+    } else {
+      // Otherwise clear to transparent
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      setHasDrawn(false);
+    }
   };
 
   const generateTypedSignature = () => {
@@ -220,13 +235,13 @@ export function SignatureModal({
                 onPointerUp={stopDrawing}
                 onPointerLeave={stopDrawing}
               />
-              {hasDrawn && (
+              {(hasDrawn || existingSignature) && (
                 <button
                   onClick={handleClear}
-                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center shadow-lg"
-                  title="Clear signature"
+                  className="absolute top-2 right-2 px-3 py-1.5 rounded bg-muted text-foreground hover:bg-muted/80 flex items-center gap-2 shadow-lg text-sm font-medium border border-border"
+                  title="Keep existing signature"
                 >
-                  <X className="h-4 w-4" />
+                  Leave as is
                 </button>
               )}
             </div>
