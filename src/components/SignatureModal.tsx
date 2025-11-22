@@ -45,8 +45,8 @@ export function SignatureModal({
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          ctx.fillStyle = "white";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // Transparent background
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
       }
     }
@@ -99,8 +99,8 @@ export function SignatureModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Clear to transparent
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
   const generateTypedSignature = () => {
@@ -110,9 +110,7 @@ export function SignatureModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return "";
 
-    // White background
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Transparent background (no fill)
 
     // Draw text
     ctx.fillStyle = "black";
@@ -121,11 +119,33 @@ export function SignatureModal({
 
     if (type === "signature") {
       const fullName = `${typedFirstName} ${typedLastName}`.trim();
-      ctx.font = "48px Brush Script MT, cursive";
+      // Calculate font size to fill 75% of canvas width
+      let fontSize = 100;
+      ctx.font = `${fontSize}px 'Brush Script MT', cursive`;
+      let textWidth = ctx.measureText(fullName).width;
+      
+      // Scale down if needed
+      const targetWidth = canvas.width * 0.75;
+      if (textWidth > targetWidth) {
+        fontSize = (fontSize * targetWidth) / textWidth;
+      }
+      
+      ctx.font = `${fontSize}px 'Brush Script MT', cursive`;
       ctx.fillText(fullName, canvas.width / 2, canvas.height / 2);
     } else {
-      const initials = `${typedFirstName.charAt(0)}${typedLastName.charAt(0)}`.toUpperCase();
-      ctx.font = "64px Brush Script MT, cursive";
+      const initials = typedFirstName.toUpperCase();
+      // Calculate font size to fill 75% of canvas width
+      let fontSize = 120;
+      ctx.font = `${fontSize}px 'Brush Script MT', cursive`;
+      let textWidth = ctx.measureText(initials).width;
+      
+      // Scale down if needed
+      const targetWidth = canvas.width * 0.75;
+      if (textWidth > targetWidth) {
+        fontSize = (fontSize * targetWidth) / textWidth;
+      }
+      
+      ctx.font = `${fontSize}px 'Brush Script MT', cursive`;
       ctx.fillText(initials, canvas.width / 2, canvas.height / 2);
     }
 
@@ -136,8 +156,11 @@ export function SignatureModal({
     let imageData = "";
 
     if (mode === "type") {
-      if (!typedFirstName.trim() || !typedLastName.trim()) {
-        return; // Don't apply if names are empty
+      if (type === "signature" && (!typedFirstName.trim() || !typedLastName.trim())) {
+        return; // Don't apply if names are empty for signature
+      }
+      if (type === "initial" && !typedFirstName.trim()) {
+        return; // Don't apply if initials are empty
       }
       imageData = generateTypedSignature();
     } else {
@@ -168,7 +191,7 @@ export function SignatureModal({
           </TabsList>
 
           <TabsContent value="draw" className="mt-4">
-            <div className="border-2 border-border rounded-lg overflow-hidden">
+            <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/10">
               <canvas
                 ref={canvasRef}
                 width={550}
@@ -183,38 +206,58 @@ export function SignatureModal({
           </TabsContent>
 
           <TabsContent value="type" className="mt-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            {type === "signature" ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={typedFirstName}
+                    onChange={(e) => setTypedFirstName(e.target.value)}
+                    placeholder="John"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={typedLastName}
+                    onChange={(e) => setTypedLastName(e.target.value)}
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+            ) : (
               <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="initials">Initials (max 3 characters)</Label>
                 <Input
-                  id="firstName"
+                  id="initials"
                   value={typedFirstName}
                   onChange={(e) => setTypedFirstName(e.target.value)}
-                  placeholder="John"
+                  placeholder="JD"
+                  maxLength={3}
+                  className="text-center text-2xl font-bold uppercase"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  value={typedLastName}
-                  onChange={(e) => setTypedLastName(e.target.value)}
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
+            )}
             
             <div className="border-2 border-border rounded-lg p-8 bg-muted/20 min-h-[150px] flex items-center justify-center">
               <div className="text-center">
-                {typedFirstName.trim() || typedLastName.trim() ? (
-                  <p className="text-4xl font-['Brush_Script_MT',cursive]">
+                {(type === "signature" && (typedFirstName.trim() || typedLastName.trim())) ||
+                 (type === "initial" && typedFirstName.trim()) ? (
+                  <p 
+                    className="font-['Brush_Script_MT',cursive]"
+                    style={{
+                      fontSize: type === "signature" ? "3rem" : "4rem"
+                    }}
+                  >
                     {type === "signature"
                       ? `${typedFirstName} ${typedLastName}`.trim()
-                      : `${typedFirstName.charAt(0)}${typedLastName.charAt(0)}`.toUpperCase()}
+                      : typedFirstName.toUpperCase()}
                   </p>
                 ) : (
                   <p className="text-muted-foreground text-sm">
-                    Enter your name to preview
+                    Enter your {type === "signature" ? "name" : "initials"} to preview
                   </p>
                 )}
               </div>
