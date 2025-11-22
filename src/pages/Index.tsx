@@ -157,8 +157,21 @@ const Index = () => {
         setSavedInitial(null);
         // Keep field values but they won't be displayed in editor mode
       }
-      // Auto-fill date fields when entering signing mode
+      // When entering signing mode, restore saved signatures from existing fields
       if (newMode === "signing") {
+        // Restore saved signature from any filled signature field
+        const filledSignature = fields.find(f => f.type === "signature" && f.isFilled && f.value);
+        if (filledSignature) {
+          setSavedSignature(filledSignature.value || null);
+        }
+        
+        // Restore saved initial from any filled initial field
+        const filledInitial = fields.find(f => f.type === "initial" && f.isFilled && f.value);
+        if (filledInitial) {
+          setSavedInitial(filledInitial.value || null);
+        }
+        
+        // Auto-fill date fields
         const today = new Date();
         const dateValue = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
         setFields(fields.map(f => 
