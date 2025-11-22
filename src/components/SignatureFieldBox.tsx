@@ -146,8 +146,7 @@ export function SignatureFieldBox({
         mode === "editor" && "cursor-move hover:shadow-lg hover:border-field-hover transition-shadow",
         isDragging && "opacity-70 scale-105 shadow-2xl z-50 transition-none",
         mode === "signing" && !field.isFilled && "cursor-pointer hover:border-field-hover hover:shadow-lg",
-        isHighlighted && "ring-4 ring-accent/50 animate-pulse scale-105",
-        field.isFilled && "bg-background"
+        isHighlighted && "ring-4 ring-accent/50 animate-pulse scale-105"
       )}
       style={{
         left: field.x,
