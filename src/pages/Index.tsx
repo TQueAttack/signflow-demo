@@ -69,9 +69,10 @@ const Index = () => {
       page,
       x,
       y,
-      width: type === "signature" ? 180 : 120,
-      height: type === "signature" ? 50 : 40,
-      isFilled: false,
+      width: type === "signature" ? 180 : type === "initial" ? 120 : 150,
+      height: type === "signature" ? 50 : type === "initial" ? 40 : 35,
+      isFilled: type === "date",
+      value: type === "date" ? new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
     };
     setFields([...fields, newField]);
   };
@@ -88,8 +89,32 @@ const Index = () => {
     }
   };
 
-  const handleFieldTypeChange = (fieldId: string, type: "signature" | "initial") => {
-    setFields(fields.map((f) => (f.id === fieldId ? { ...f, type } : f)));
+  const handleFieldTypeChange = (fieldId: string, type: FieldType) => {
+    setFields(fields.map((f) => {
+      if (f.id === fieldId) {
+        // When changing to date, auto-fill it
+        if (type === "date") {
+          return {
+            ...f,
+            type,
+            width: 150,
+            height: 35,
+            isFilled: true,
+            value: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+          };
+        }
+        // When changing from date to other types, reset
+        return {
+          ...f,
+          type,
+          width: type === "signature" ? 180 : 120,
+          height: type === "signature" ? 50 : 40,
+          isFilled: false,
+          value: undefined
+        };
+      }
+      return f;
+    }));
   };
 
   const handleSaveLayout = () => {
@@ -118,6 +143,13 @@ const Index = () => {
       if (newMode === "editor") {
         setSavedSignature(null);
         setSavedInitial(null);
+      }
+      // Auto-fill date fields when entering signing mode
+      if (newMode === "signing") {
+        const todayDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        setFields(fields.map(f => 
+          f.type === "date" ? { ...f, isFilled: true, value: todayDate } : f
+        ));
       }
     }
   };
@@ -327,7 +359,7 @@ const Index = () => {
 
       <SignatureModal
         open={showSignatureModal}
-        type={currentField?.type || "signature"}
+        type={(currentField?.type === "date" ? "signature" : currentField?.type) || "signature"}
         onClose={() => {
           setShowSignatureModal(false);
           setCurrentField(null);

@@ -7,7 +7,7 @@ interface FieldOverlayProps {
   onFieldClick?: (field: SignatureField) => void;
   onFieldMove?: (fieldId: string, x: number, y: number, page: number) => void;
   onFieldDelete?: (fieldId: string) => void;
-  onFieldTypeChange?: (fieldId: string, type: "signature" | "initial") => void;
+  onFieldTypeChange?: (fieldId: string, type: "signature" | "initial" | "date") => void;
   onPageClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   pageWidth: number;
   pageHeight: number;

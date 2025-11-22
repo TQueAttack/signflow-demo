@@ -1,4 +1,4 @@
-export type FieldType = "signature" | "initial";
+export type FieldType = "signature" | "initial" | "date";
 
 export type AppMode = "editor" | "signing";
 
