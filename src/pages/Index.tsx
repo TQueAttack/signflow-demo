@@ -137,14 +137,18 @@ const Index = () => {
       
       if (savedValue) {
         // Auto-apply the saved signature
-        setFields(
-          fields.map((f) =>
-            f.id === field.id
-              ? { ...f, value: savedValue, isFilled: true }
-              : f
-          )
+        const updatedFields = fields.map((f) =>
+          f.id === field.id
+            ? { ...f, value: savedValue, isFilled: true }
+            : f
         );
+        setFields(updatedFields);
         toast.success(`${field.type === "signature" ? "Signature" : "Initial"} applied!`);
+        
+        // Auto-scroll to next field after a short delay
+        setTimeout(() => {
+          scrollToNextField(updatedFields);
+        }, 500);
       } else {
         // First time signing, open modal
         setCurrentField(field);
@@ -164,30 +168,55 @@ const Index = () => {
     }
 
     // Apply to current field
-    setFields(
-      fields.map((f) =>
-        f.id === currentField.id
-          ? { ...f, value: imageData, isFilled: true }
-          : f
-      )
+    const updatedFields = fields.map((f) =>
+      f.id === currentField.id
+        ? { ...f, value: imageData, isFilled: true }
+        : f
     );
+    setFields(updatedFields);
     setShowSignatureModal(false);
     setCurrentField(null);
+    
+    const fieldType = currentField.type;
     toast.success(
-      `${currentField.type === "signature" ? "Signature" : "Initial"} saved! It will be applied to all remaining ${currentField.type} fields.`
+      `${fieldType === "signature" ? "Signature" : "Initial"} saved! It will be applied to all remaining ${fieldType} fields.`
     );
+
+    // Auto-scroll to next unfilled field after a short delay
+    setTimeout(() => {
+      scrollToNextField(updatedFields);
+    }, 500);
+  };
+
+  const scrollToNextField = (fieldsToCheck: SignatureField[] = fields) => {
+    const nextField = fieldsToCheck.find((f) => !f.isFilled);
+    if (nextField) {
+      setHighlightedFieldId(nextField.id);
+      
+      // Find the field element and scroll to it
+      setTimeout(() => {
+        const fieldElements = document.querySelectorAll('[data-field-id]');
+        const targetElement = Array.from(fieldElements).find(
+          (el) => el.getAttribute('data-field-id') === nextField.id
+        );
+        
+        if (targetElement) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+        }
+        
+        // Clear highlight after animation
+        setTimeout(() => {
+          setHighlightedFieldId(undefined);
+        }, 2000);
+      }, 100);
+    }
   };
 
   const handleNextSignature = () => {
-    const nextField = fields.find((f) => !f.isFilled);
-    if (nextField) {
-      setHighlightedFieldId(nextField.id);
-      // Scroll to field
-      setTimeout(() => {
-        const element = document.querySelector(`[data-field-id="${nextField.id}"]`);
-        element?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
-    }
+    scrollToNextField();
   };
 
   const handleComplete = () => {
