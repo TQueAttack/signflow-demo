@@ -33,7 +33,7 @@ export function FieldOverlay({
   hasSavedInitial = false,
 }: FieldOverlayProps) {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only handle clicks on the overlay itself, not on fields
+    // Only handle clicks directly on the overlay, not on fields or their children
     if (e.target === e.currentTarget && onPageClick) {
       onPageClick(e);
     }
@@ -41,7 +41,7 @@ export function FieldOverlay({
 
   return (
     <div
-      className={`absolute inset-0 ${isPlacingField ? "cursor-crosshair pointer-events-auto" : "pointer-events-none"}`}
+      className={`absolute inset-0 ${isPlacingField ? "cursor-crosshair" : "pointer-events-none"}`}
       style={{ width: pageWidth, height: pageHeight }}
       onClick={mode === "editor" && isPlacingField ? handleClick : undefined}
     >
