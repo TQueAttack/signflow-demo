@@ -31,6 +31,11 @@ const Index = () => {
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [savedInitial, setSavedInitial] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // TODO: Replace these with data from your server
+  // Example: Pass firstName and lastName from your backend API
+  const [signerFirstName] = useState<string>("");
+  const [signerLastName] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -373,6 +378,8 @@ const Index = () => {
           setCurrentField(null);
         }}
         onApply={handleSignatureApply}
+        firstName={signerFirstName}
+        lastName={signerLastName}
       />
 
       <ConsentModal
