@@ -8,10 +8,11 @@ interface FieldOverlayProps {
   onFieldMove?: (fieldId: string, x: number, y: number, page: number) => void;
   onFieldDelete?: (fieldId: string) => void;
   onFieldTypeChange?: (fieldId: string, type: "signature" | "initial") => void;
-  onLongPress?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPageClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   pageWidth: number;
   pageHeight: number;
   highlightedFieldId?: string;
+  isPlacingField?: boolean;
 }
 
 export function FieldOverlay({
@@ -21,34 +22,24 @@ export function FieldOverlay({
   onFieldMove,
   onFieldDelete,
   onFieldTypeChange,
-  onLongPress,
+  onPageClick,
   pageWidth,
   pageHeight,
   highlightedFieldId,
+  isPlacingField = false,
 }: FieldOverlayProps) {
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only handle clicks on the overlay itself, not on fields
+    if (e.target === e.currentTarget && onPageClick) {
+      onPageClick(e);
+    }
+  };
+
   return (
     <div
-      className="absolute inset-0 pointer-events-none"
+      className={`absolute inset-0 ${isPlacingField ? "cursor-crosshair pointer-events-auto" : "pointer-events-none"}`}
       style={{ width: pageWidth, height: pageHeight }}
-      onPointerDown={
-        mode === "editor"
-          ? (e) => {
-              // Check if clicking on empty space
-              if (e.target === e.currentTarget && onLongPress) {
-                const timer = setTimeout(() => {
-                  onLongPress(e);
-                }, 600);
-                e.currentTarget.dataset.timer = String(timer);
-              }
-            }
-          : undefined
-      }
-      onPointerUp={(e) => {
-        if (mode === "editor" && e.currentTarget.dataset.timer) {
-          clearTimeout(Number(e.currentTarget.dataset.timer));
-          delete e.currentTarget.dataset.timer;
-        }
-      }}
+      onClick={mode === "editor" && isPlacingField ? handleClick : undefined}
     >
       {fields.map((field) => (
         <SignatureFieldBox
