@@ -15,6 +15,8 @@ interface PdfViewerProps {
   onAddField?: (x: number, y: number, page: number, type: "signature" | "initial") => void;
   highlightedFieldId?: string;
   selectedFieldType?: "signature" | "initial" | null;
+  hasSavedSignature?: boolean;
+  hasSavedInitial?: boolean;
 }
 
 export function PdfViewer({
@@ -28,6 +30,8 @@ export function PdfViewer({
   onAddField,
   highlightedFieldId,
   selectedFieldType,
+  hasSavedSignature = false,
+  hasSavedInitial = false,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<Array<{ width: number; height: number }>>([]);
   const canvasRefs = useRef<HTMLCanvasElement[]>([]);
@@ -105,6 +109,8 @@ export function PdfViewer({
             pageHeight={pages[i]?.height || 0}
             highlightedFieldId={highlightedFieldId}
             isPlacingField={mode === "editor" && selectedFieldType !== null}
+            hasSavedSignature={hasSavedSignature}
+            hasSavedInitial={hasSavedInitial}
           />
         </div>
       ))}

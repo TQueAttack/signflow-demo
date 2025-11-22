@@ -28,6 +28,8 @@ const Index = () => {
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null);
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
+  const [savedInitial, setSavedInitial] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -113,6 +115,11 @@ const Index = () => {
       setShowConsentModal(true);
     } else {
       setMode(newMode);
+      // Reset saved signatures when switching modes
+      if (newMode === "editor") {
+        setSavedSignature(null);
+        setSavedInitial(null);
+      }
     }
   };
 
@@ -125,14 +132,38 @@ const Index = () => {
 
   const handleFieldClick = (field: SignatureField) => {
     if (mode === "signing" && !field.isFilled) {
-      setCurrentField(field);
-      setShowSignatureModal(true);
+      // Check if we have a saved signature/initial for this type
+      const savedValue = field.type === "signature" ? savedSignature : savedInitial;
+      
+      if (savedValue) {
+        // Auto-apply the saved signature
+        setFields(
+          fields.map((f) =>
+            f.id === field.id
+              ? { ...f, value: savedValue, isFilled: true }
+              : f
+          )
+        );
+        toast.success(`${field.type === "signature" ? "Signature" : "Initial"} applied!`);
+      } else {
+        // First time signing, open modal
+        setCurrentField(field);
+        setShowSignatureModal(true);
+      }
     }
   };
 
   const handleSignatureApply = (imageData: string) => {
     if (!currentField) return;
 
+    // Save the signature/initial for future use
+    if (currentField.type === "signature") {
+      setSavedSignature(imageData);
+    } else {
+      setSavedInitial(imageData);
+    }
+
+    // Apply to current field
     setFields(
       fields.map((f) =>
         f.id === currentField.id
@@ -142,7 +173,9 @@ const Index = () => {
     );
     setShowSignatureModal(false);
     setCurrentField(null);
-    toast.success("Signature applied!");
+    toast.success(
+      `${currentField.type === "signature" ? "Signature" : "Initial"} saved! It will be applied to all remaining ${currentField.type} fields.`
+    );
   };
 
   const handleNextSignature = () => {
@@ -204,6 +237,8 @@ const Index = () => {
         onNextSignature={handleNextSignature}
         allFieldsFilled={allFieldsFilled}
         onComplete={handleComplete}
+        hasSavedSignature={savedSignature !== null}
+        hasSavedInitial={savedInitial !== null}
       />
 
       <main className="container mx-auto px-4 py-8">
@@ -257,6 +292,8 @@ const Index = () => {
                 onAddField={handleAddField}
                 highlightedFieldId={highlightedFieldId}
                 selectedFieldType={selectedFieldType}
+                hasSavedSignature={savedSignature !== null}
+                hasSavedInitial={savedInitial !== null}
               />
             </div>
           </div>
