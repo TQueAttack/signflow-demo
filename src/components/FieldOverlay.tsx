@@ -33,8 +33,11 @@ export function FieldOverlay({
   hasSavedInitial = false,
 }: FieldOverlayProps) {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only handle clicks directly on the overlay, not on fields or their children
-    if (e.target === e.currentTarget && onPageClick) {
+    // Only place field if clicking directly on overlay (not after dragging a field)
+    const target = e.target as HTMLElement;
+    const isDraggingField = target.closest('[data-dragging="true"]');
+    
+    if (e.target === e.currentTarget && onPageClick && !isDraggingField) {
       onPageClick(e);
     }
   };

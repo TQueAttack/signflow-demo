@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { SignatureField } from "@/types/document";
 import { X, CheckCircle2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,8 +38,9 @@ export function SignatureFieldBox({
   hasSavedValue = false,
 }: SignatureFieldBoxProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
+  const initialPosRef = useRef({ x: 0, y: 0 });
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (mode === "editor" && onMove) {
@@ -49,16 +50,24 @@ export function SignatureFieldBox({
         return;
       }
 
-      e.stopPropagation(); // Prevent triggering page click
+      e.stopPropagation();
+      e.preventDefault();
       
-      // Start dragging immediately in editor mode
-      setIsDragging(true);
+      // Capture the pointer to this element
+      e.currentTarget.setPointerCapture(e.pointerId);
+      
+      // Store initial field position
+      initialPosRef.current = { x: field.x, y: field.y };
+      
+      // Calculate offset from field's top-left to pointer position
       const rect = e.currentTarget.getBoundingClientRect();
-      setDragOffset({
+      dragOffsetRef.current = {
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
-      });
-      setDragStart({ x: e.clientX, y: e.clientY });
+      };
+      
+      setIsDragging(true);
+      setHasMoved(false);
     } else if (mode === "signing" && !field.isFilled) {
       onClick?.();
     }
@@ -69,20 +78,40 @@ export function SignatureFieldBox({
       e.preventDefault();
       e.stopPropagation();
       
-      // Calculate new position based on pointer location minus the offset
-      const parentRect = e.currentTarget.parentElement?.getBoundingClientRect();
-      if (parentRect) {
-        const newX = Math.max(0, Math.min(e.clientX - parentRect.left - dragOffset.x, parentRect.width - field.width));
-        const newY = Math.max(0, Math.min(e.clientY - parentRect.top - dragOffset.y, parentRect.height - field.height));
-        onMove(field.id, newX, newY, field.page);
-      }
+      setHasMoved(true);
+      
+      // Get parent container (the page overlay)
+      const parent = e.currentTarget.parentElement;
+      if (!parent) return;
+      
+      const parentRect = parent.getBoundingClientRect();
+      
+      // Calculate new position: pointer position - parent offset - drag offset
+      let newX = e.clientX - parentRect.left - dragOffsetRef.current.x;
+      let newY = e.clientY - parentRect.top - dragOffsetRef.current.y;
+      
+      // Constrain to parent bounds
+      newX = Math.max(0, Math.min(newX, parentRect.width - field.width));
+      newY = Math.max(0, Math.min(newY, parentRect.height - field.height));
+      
+      onMove(field.id, newX, newY, field.page);
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (isDragging) {
       e.stopPropagation();
+      e.preventDefault();
+      
+      // Release pointer capture
+      e.currentTarget.releasePointerCapture(e.pointerId);
+      
       setIsDragging(false);
+      
+      // Reset hasMoved after a short delay to prevent click-to-place
+      setTimeout(() => {
+        setHasMoved(false);
+      }, 100);
     }
   };
 
@@ -99,12 +128,13 @@ export function SignatureFieldBox({
   const fieldContent = (
     <div
       data-field-id={field.id}
+      data-dragging={isDragging ? "true" : "false"}
       className={cn(
-        "absolute pointer-events-auto transition-all duration-200 border-2 rounded flex items-center justify-center",
+        "absolute pointer-events-auto border-2 rounded flex items-center justify-center touch-none",
         borderColor,
         bgColor,
-        mode === "editor" && "cursor-move hover:shadow-lg hover:border-field-hover",
-        isDragging && "opacity-70 scale-105 shadow-2xl z-50",
+        mode === "editor" && "cursor-move hover:shadow-lg hover:border-field-hover transition-shadow",
+        isDragging && "opacity-70 scale-105 shadow-2xl z-50 transition-none",
         mode === "signing" && !field.isFilled && "cursor-pointer hover:border-field-hover hover:shadow-lg",
         isHighlighted && "ring-4 ring-accent/50 animate-pulse scale-105",
         field.isFilled && "bg-background"
@@ -118,7 +148,7 @@ export function SignatureFieldBox({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {field.isFilled && field.value ? (
         <img
