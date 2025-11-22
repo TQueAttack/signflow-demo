@@ -215,6 +215,16 @@ export function SignatureModal({
           <DialogDescription>
             Draw or type your {type === "signature" ? "signature" : "initials"}
           </DialogDescription>
+          {existingSignature && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onClose}
+              className="absolute right-4 top-4"
+            >
+              Leave as is
+            </Button>
+          )}
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as "draw" | "type")}>
@@ -224,7 +234,7 @@ export function SignatureModal({
           </TabsList>
 
           <TabsContent value="draw" className="mt-4">
-            <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/10 relative">
+            <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/10">
               <canvas
                 ref={canvasRef}
                 width={550}
@@ -235,15 +245,6 @@ export function SignatureModal({
                 onPointerUp={stopDrawing}
                 onPointerLeave={stopDrawing}
               />
-              {(hasDrawn || existingSignature) && (
-                <button
-                  onClick={handleClear}
-                  className="absolute top-2 right-2 px-3 py-1.5 rounded bg-muted text-foreground hover:bg-muted/80 flex items-center gap-2 shadow-lg text-sm font-medium border border-border"
-                  title="Keep existing signature"
-                >
-                  Leave as is
-                </button>
-              )}
             </div>
           </TabsContent>
 
