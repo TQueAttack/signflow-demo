@@ -11,10 +11,10 @@ interface PdfViewerProps {
   onFieldClick?: (field: SignatureField) => void;
   onFieldMove?: (fieldId: string, x: number, y: number, page: number) => void;
   onFieldDelete?: (fieldId: string) => void;
-  onFieldTypeChange?: (fieldId: string, type: "signature" | "initial") => void;
-  onAddField?: (x: number, y: number, page: number, type: "signature" | "initial") => void;
+  onFieldTypeChange?: (fieldId: string, type: "signature" | "initial" | "date") => void;
+  onAddField?: (x: number, y: number, page: number, type: "signature" | "initial" | "date") => void;
   highlightedFieldId?: string;
-  selectedFieldType?: "signature" | "initial" | null;
+  selectedFieldType?: "signature" | "initial" | "date" | null;
   hasSavedSignature?: boolean;
   hasSavedInitial?: boolean;
 }

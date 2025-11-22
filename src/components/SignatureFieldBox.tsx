@@ -22,7 +22,7 @@ interface SignatureFieldBoxProps {
   onClick?: () => void;
   onMove?: (fieldId: string, x: number, y: number, page: number) => void;
   onDelete?: (fieldId: string) => void;
-  onTypeChange?: (fieldId: string, type: "signature" | "initial") => void;
+  onTypeChange?: (fieldId: string, type: "signature" | "initial" | "date") => void;
   isHighlighted?: boolean;
   hasSavedValue?: boolean;
 }
@@ -118,12 +118,16 @@ export function SignatureFieldBox({
   const borderColor =
     field.type === "signature"
       ? "border-field-signature"
-      : "border-field-initial";
+      : field.type === "initial"
+      ? "border-field-initial"
+      : "border-primary";
 
   const bgColor =
     field.type === "signature"
       ? "bg-field-signature/10"
-      : "bg-field-initial/10";
+      : field.type === "initial"
+      ? "bg-field-initial/10"
+      : "bg-primary/10";
 
   const fieldContent = (
     <div
@@ -150,7 +154,11 @@ export function SignatureFieldBox({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
-      {field.isFilled && field.value ? (
+      {field.type === "date" && field.value ? (
+        <div className="text-sm font-medium text-foreground px-2">
+          {field.value}
+        </div>
+      ) : field.isFilled && field.value ? (
         <img
           src={field.value}
           alt="Signature"
@@ -164,7 +172,7 @@ export function SignatureFieldBox({
               <Select
                 value={field.type}
                 onValueChange={(value) =>
-                  onTypeChange?.(field.id, value as "signature" | "initial")
+                  onTypeChange?.(field.id, value as "signature" | "initial" | "date")
                 }
               >
                 <SelectTrigger className="h-7 text-xs border-none bg-transparent flex-1">
@@ -173,6 +181,7 @@ export function SignatureFieldBox({
                 <SelectContent>
                   <SelectItem value="signature">Signature</SelectItem>
                   <SelectItem value="initial">Initial</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
                 </SelectContent>
               </Select>
               <button
@@ -186,7 +195,7 @@ export function SignatureFieldBox({
               </button>
             </div>
           )}
-          {mode === "signing" && !field.isFilled && (
+          {mode === "signing" && !field.isFilled && field.type !== "date" && (
             <div className="flex items-center gap-1.5">
               {hasSavedValue && <CheckCircle2 className="h-3.5 w-3.5 text-success" />}
               <span className="text-xs font-medium text-muted-foreground">

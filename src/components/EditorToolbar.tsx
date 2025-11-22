@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Save, Upload, FileJson, PenTool, Type } from "lucide-react";
+import { Save, Upload, FileJson, PenTool, Type, Calendar } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { FieldType } from "@/types/document";
@@ -58,6 +58,18 @@ export function EditorToolbar({ onSave, onLoadLayout, selectedFieldType, onField
           >
             <Type className="mr-2 h-4 w-4" />
             Initial Field
+          </Button>
+          <Button
+            variant={selectedFieldType === "date" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onFieldTypeSelect(selectedFieldType === "date" ? null : "date")}
+            className={cn(
+              "transition-all",
+              selectedFieldType === "date" && "ring-2 ring-primary ring-offset-2"
+            )}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            Date Field
           </Button>
         </div>
         {selectedFieldType && (
