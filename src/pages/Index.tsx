@@ -1,12 +1,267 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useRef } from "react";
+import { PDFDocumentProxy } from "pdfjs-dist";
+import { v4 as uuidv4 } from "uuid";
+import { Header } from "@/components/Header";
+import { PdfViewer } from "@/components/PdfViewer";
+import { SignatureModal } from "@/components/SignatureModal";
+import { ConsentModal } from "@/components/ConsentModal";
+import { CompletionModal } from "@/components/CompletionModal";
+import { EditorToolbar } from "@/components/EditorToolbar";
+import { Button } from "@/components/ui/button";
+import { AppMode, SignatureField, DocumentLayout, CompletionData } from "@/types/document";
+import { loadPdfDocument } from "@/utils/pdfUtils";
+import { saveLayout, loadLayout } from "@/utils/layoutUtils";
+import { exportSignedPdf } from "@/utils/pdfExport";
+import { Upload } from "lucide-react";
+import { toast } from "sonner";
 
 const Index = () => {
+  const [mode, setMode] = useState<AppMode>("editor");
+  const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [fields, setFields] = useState<SignatureField[]>([]);
+  const [currentField, setCurrentField] = useState<SignatureField | null>(null);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const pdfDoc = await loadPdfDocument(file);
+      setPdf(pdfDoc);
+      setPdfUrl(URL.createObjectURL(file));
+      toast.success("PDF loaded successfully!");
+    } catch (error) {
+      console.error("Error loading PDF:", error);
+      toast.error("Failed to load PDF");
+    }
+  };
+
+  const handleAddField = (x: number, y: number, page: number) => {
+    const newField: SignatureField = {
+      id: uuidv4(),
+      type: "signature",
+      page,
+      x,
+      y,
+      width: 180,
+      height: 50,
+      isFilled: false,
+    };
+    setFields([...fields, newField]);
+    toast.success("Field added! Drag to move, tap X to delete");
+  };
+
+  const handleFieldMove = (fieldId: string, x: number, y: number, page: number) => {
+    setFields(
+      fields.map((f) => (f.id === fieldId ? { ...f, x, y, page } : f))
+    );
+  };
+
+  const handleFieldDelete = (fieldId: string) => {
+    if (window.confirm("Delete this field?")) {
+      setFields(fields.filter((f) => f.id !== fieldId));
+      toast.success("Field deleted");
+    }
+  };
+
+  const handleFieldTypeChange = (fieldId: string, type: "signature" | "initial") => {
+    setFields(fields.map((f) => (f.id === fieldId ? { ...f, type } : f)));
+  };
+
+  const handleSaveLayout = () => {
+    const layout: DocumentLayout = { pdfUrl, fields };
+    saveLayout(layout);
+    toast.success("Layout saved!");
+  };
+
+  const handleLoadLayout = async (file: File) => {
+    try {
+      const layout = await loadLayout(file);
+      setFields(layout.fields.map(f => ({ ...f, isFilled: false, value: undefined })));
+      toast.success("Layout loaded!");
+    } catch (error) {
+      console.error("Error loading layout:", error);
+      toast.error("Failed to load layout");
+    }
+  };
+
+  const handleModeChange = (newMode: AppMode) => {
+    if (newMode === "signing" && !consentGiven) {
+      setShowConsentModal(true);
+    } else {
+      setMode(newMode);
+    }
+  };
+
+  const handleConsentAgree = () => {
+    setConsentGiven(true);
+    setShowConsentModal(false);
+    setMode("signing");
+    toast.success("Ready to sign!");
+  };
+
+  const handleFieldClick = (field: SignatureField) => {
+    if (mode === "signing" && !field.isFilled) {
+      setCurrentField(field);
+      setShowSignatureModal(true);
+    }
+  };
+
+  const handleSignatureApply = (imageData: string) => {
+    if (!currentField) return;
+
+    setFields(
+      fields.map((f) =>
+        f.id === currentField.id
+          ? { ...f, value: imageData, isFilled: true }
+          : f
+      )
+    );
+    setShowSignatureModal(false);
+    setCurrentField(null);
+    toast.success("Signature applied!");
+  };
+
+  const handleNextSignature = () => {
+    const nextField = fields.find((f) => !f.isFilled);
+    if (nextField) {
+      setHighlightedFieldId(nextField.id);
+      // Scroll to field
+      setTimeout(() => {
+        const element = document.querySelector(`[data-field-id="${nextField.id}"]`);
+        element?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  };
+
+  const handleComplete = () => {
+    setShowCompletionModal(true);
+    
+    // Send postMessage to parent (for Unity iframe integration)
+    const completionData: CompletionData = {
+      status: "completed",
+      documentLayout: { pdfUrl, fields },
+      timestamp: new Date().toISOString(),
+    };
+    window.parent.postMessage(completionData, "*");
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!pdf) return;
+    
+    try {
+      await exportSignedPdf(pdf, { pdfUrl, fields });
+      toast.success("PDF downloaded!");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Failed to export PDF");
+    }
+  };
+
+  const handleReturn = () => {
+    setShowCompletionModal(false);
+    toast.success("Thank you for signing!");
+  };
+
+  const signaturesRemaining = fields.filter(
+    (f) => f.type === "signature" && !f.isFilled
+  ).length;
+  const initialsRemaining = fields.filter(
+    (f) => f.type === "initial" && !f.isFilled
+  ).length;
+  const allFieldsFilled = fields.length > 0 && fields.every((f) => f.isFilled);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header
+        mode={mode}
+        onModeChange={handleModeChange}
+        signaturesRemaining={signaturesRemaining}
+        initialsRemaining={initialsRemaining}
+        onNextSignature={handleNextSignature}
+        allFieldsFilled={allFieldsFilled}
+        onComplete={handleComplete}
+      />
+
+      <main className="container mx-auto px-4 py-8">
+        {!pdf ? (
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-4">Upload a PDF to Get Started</h2>
+              <p className="text-muted-foreground">
+                Upload a document to add signature fields or sign an existing document
+              </p>
+            </div>
+            <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
+              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button onClick={() => fileInputRef.current?.click()} size="lg">
+                Choose PDF File
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {mode === "editor" && (
+              <EditorToolbar
+                onSave={handleSaveLayout}
+                onLoadLayout={handleLoadLayout}
+              />
+            )}
+
+            <div className="bg-muted/30 rounded-lg p-8">
+              <PdfViewer
+                pdf={pdf}
+                fields={fields}
+                mode={mode}
+                onFieldClick={handleFieldClick}
+                onFieldMove={handleFieldMove}
+                onFieldDelete={handleFieldDelete}
+                onFieldTypeChange={handleFieldTypeChange}
+                onAddField={handleAddField}
+                highlightedFieldId={highlightedFieldId}
+              />
+            </div>
+          </div>
+        )}
+      </main>
+
+      <SignatureModal
+        open={showSignatureModal}
+        type={currentField?.type || "signature"}
+        onClose={() => {
+          setShowSignatureModal(false);
+          setCurrentField(null);
+        }}
+        onApply={handleSignatureApply}
+      />
+
+      <ConsentModal
+        open={showConsentModal}
+        onAgree={handleConsentAgree}
+        onCancel={() => setShowConsentModal(false)}
+      />
+
+      <CompletionModal
+        open={showCompletionModal}
+        onDownload={handleDownloadPdf}
+        onReturn={handleReturn}
+        documentLayout={{ pdfUrl, fields }}
+      />
     </div>
   );
 };
