@@ -171,21 +171,9 @@ export function SignatureFieldBox({
           {mode === "editor" && (
             <div className="flex items-center gap-2 px-2 w-full" onClick={(e) => e.stopPropagation()}>
               <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <Select
-                value={field.type}
-                onValueChange={(value) =>
-                  onTypeChange?.(field.id, value as "signature" | "initial" | "date")
-                }
-              >
-                <SelectTrigger className="h-7 text-xs border-none bg-transparent flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="signature">Signature</SelectItem>
-                  <SelectItem value="initial">Initial</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                </SelectContent>
-              </Select>
+              <span className="text-xs font-medium flex-1">
+                {field.type === "signature" ? "Signature" : field.type === "initial" ? "Initial" : "Date"}
+              </span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();

@@ -11,6 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { X } from "lucide-react";
 
 interface SignatureModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface SignatureModalProps {
   onApply: (imageData: string) => void;
   firstName?: string;
   lastName?: string;
+  existingSignature?: string | null;
 }
 
 export function SignatureModal({
@@ -28,12 +30,14 @@ export function SignatureModal({
   onApply,
   firstName = "",
   lastName = "",
+  existingSignature = null,
 }: SignatureModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [mode, setMode] = useState<"draw" | "type">("draw");
   const [typedFirstName, setTypedFirstName] = useState("");
   const [typedLastName, setTypedLastName] = useState("");
+  const [hasDrawn, setHasDrawn] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -47,13 +51,26 @@ export function SignatureModal({
         if (ctx) {
           // Transparent background
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          // If editing existing signature, load it onto canvas
+          if (existingSignature) {
+            const img = new Image();
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              setHasDrawn(true);
+            };
+            img.src = existingSignature;
+          } else {
+            setHasDrawn(false);
+          }
         }
       }
     }
-  }, [open, firstName, lastName]);
+  }, [open, firstName, lastName, existingSignature]);
 
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
+    setHasDrawn(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -101,6 +118,7 @@ export function SignatureModal({
 
     // Clear to transparent
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
   };
 
   const generateTypedSignature = () => {
@@ -191,7 +209,7 @@ export function SignatureModal({
           </TabsList>
 
           <TabsContent value="draw" className="mt-4">
-            <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/10">
+            <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/10 relative">
               <canvas
                 ref={canvasRef}
                 width={550}
@@ -202,6 +220,15 @@ export function SignatureModal({
                 onPointerUp={stopDrawing}
                 onPointerLeave={stopDrawing}
               />
+              {hasDrawn && (
+                <button
+                  onClick={handleClear}
+                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center shadow-lg"
+                  title="Clear signature"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </TabsContent>
 
@@ -266,11 +293,6 @@ export function SignatureModal({
         </Tabs>
 
         <DialogFooter className="gap-2">
-          {mode === "draw" && (
-            <Button variant="outline" onClick={handleClear}>
-              Clear
-            </Button>
-          )}
           <Button onClick={handleApply}>Apply</Button>
         </DialogFooter>
       </DialogContent>
