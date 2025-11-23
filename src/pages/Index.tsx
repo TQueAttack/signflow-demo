@@ -264,7 +264,14 @@ const Index = () => {
   };
 
   const scrollToNextField = (fieldsToCheck: SignatureField[] = fields) => {
-    const nextField = fieldsToCheck.find((f) => !f.isFilled);
+    // Sort fields by natural document order: page number, then Y position (top to bottom), then X position (left to right)
+    const sortedFields = [...fieldsToCheck].sort((a, b) => {
+      if (a.page !== b.page) return a.page - b.page;
+      if (a.y !== b.y) return a.y - b.y;
+      return a.x - b.x;
+    });
+    
+    const nextField = sortedFields.find((f) => !f.isFilled);
     if (nextField) {
       setHighlightedFieldId(nextField.id);
       
