@@ -377,7 +377,7 @@ const Index = () => {
         ) : (
           <div className="space-y-6">
             {mode === "editor" && (
-              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b pb-4">
+              <div className="sticky top-20 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b pb-4 shadow-sm">
                 <EditorToolbar
                   onSave={handleSaveLayout}
                   onLoadLayout={handleLoadLayout}
