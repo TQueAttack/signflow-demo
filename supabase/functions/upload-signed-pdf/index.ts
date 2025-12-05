@@ -6,34 +6,29 @@ const corsHeaders = {
 };
 
 async function insertIntoAzureSQL(fileUrl: string): Promise<void> {
-  const server = Deno.env.get('AZURE_SQL_SERVER');
-  const database = Deno.env.get('AZURE_SQL_DATABASE');
-  const username = Deno.env.get('AZURE_SQL_USERNAME');
-  const password = Deno.env.get('AZURE_SQL_PASSWORD');
-
-  if (!server || !database || !username || !password) {
-    throw new Error('Missing Azure SQL configuration');
+  const azureFunctionUrl = Deno.env.get('AZURE_SQL_FUNCTION_URL');
+  
+  if (!azureFunctionUrl) {
+    throw new Error('AZURE_SQL_FUNCTION_URL not configured');
   }
 
-  console.log(`Connecting to Azure SQL: ${server}/${database}`);
+  console.log(`Calling Azure Function to insert file URL: ${fileUrl}`);
 
-  // Use Azure SQL REST API via ODBC connection string approach
-  // Since direct mssql isn't available, we'll use an HTTP-based approach
-  // You may need to set up an Azure Function or API Management layer for this
-  
-  // Alternative: Use Azure SQL Data API (if enabled) or create a separate Azure Function
-  // For now, we'll log the intent and you can configure the actual SQL insertion method
-  
-  console.log(`Would insert file URL into Azure SQL: ${fileUrl}`);
-  console.log('Note: Direct Azure SQL connection from Deno requires additional setup.');
-  console.log('Consider using Azure Functions or an API layer for SQL operations.');
-  
-  // Placeholder - this will need to be configured based on your Azure setup
-  // Options:
-  // 1. Create an Azure Function that handles SQL insertion
-  // 2. Use Azure Logic Apps
-  // 3. Use Azure Data API Builder
-  throw new Error('Azure SQL direct connection not yet configured. See logs for options.');
+  const response = await fetch(azureFunctionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ fileUrl }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Azure Function failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log('Azure SQL insert result:', result);
 }
 
 serve(async (req) => {
@@ -104,7 +99,7 @@ serve(async (req) => {
     const publicBlobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${fileName}`;
     console.log(`Successfully uploaded: ${fileName}`);
 
-    // Insert file URL into Azure SQL Database
+    // Insert file URL into Azure SQL Database via Azure Function
     try {
       await insertIntoAzureSQL(publicBlobUrl);
       console.log('Database record created successfully');
