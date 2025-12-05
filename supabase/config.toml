@@ -1,1 +1,4 @@
 project_id = "ixwarzburtfwatqzkhbb"
+
+[functions.upload-signed-pdf]
+verify_jwt = false
