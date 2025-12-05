@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { AppMode, SignatureField, DocumentLayout, CompletionData, FieldType } from "@/types/document";
 import { loadPdfDocument } from "@/utils/pdfUtils";
 import { saveLayout, loadLayout } from "@/utils/layoutUtils";
-import { exportSignedPdf } from "@/utils/pdfExport";
+import { exportSignedPdf, getSignedPdfBase64 } from "@/utils/pdfExport";
+import { supabase } from "@/integrations/supabase/client";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -301,7 +302,34 @@ const Index = () => {
     scrollToNextField();
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    if (!pdf) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      // Generate PDF and upload to Azure
+      const pdfBase64 = await getSignedPdfBase64(pdf, { pdfUrl, fields });
+      const fileName = `signed-document-${Date.now()}.pdf`;
+      
+      const { data, error } = await supabase.functions.invoke('upload-signed-pdf', {
+        body: { pdfBase64, fileName }
+      });
+      
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error('Failed to upload signed document');
+      } else {
+        console.log('Upload successful:', data);
+        toast.success('Document uploaded successfully');
+      }
+    } catch (error) {
+      console.error('Error during completion:', error);
+      toast.error('Failed to process document');
+    } finally {
+      setIsProcessing(false);
+    }
+    
     setShowCompletionModal(true);
     
     // Send postMessage to parent (for Unity iframe integration)

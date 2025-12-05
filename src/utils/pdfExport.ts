@@ -3,10 +3,10 @@ import { DocumentLayout } from "@/types/document";
 import { PDFDocumentProxy } from "pdfjs-dist";
 import { renderPdfPage } from "./pdfUtils";
 
-export async function exportSignedPdf(
+export async function generateSignedPdf(
   pdf: PDFDocumentProxy,
   documentLayout: DocumentLayout
-): Promise<void> {
+): Promise<jsPDF> {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "pt",
@@ -64,5 +64,23 @@ export async function exportSignedPdf(
     }
   }
 
+  return doc;
+}
+
+export async function exportSignedPdf(
+  pdf: PDFDocumentProxy,
+  documentLayout: DocumentLayout
+): Promise<void> {
+  const doc = await generateSignedPdf(pdf, documentLayout);
   doc.save(`signed-document-${Date.now()}.pdf`);
+}
+
+export async function getSignedPdfBase64(
+  pdf: PDFDocumentProxy,
+  documentLayout: DocumentLayout
+): Promise<string> {
+  const doc = await generateSignedPdf(pdf, documentLayout);
+  // Get base64 without the data URI prefix
+  const base64 = doc.output('datauristring').split(',')[1];
+  return base64;
 }
