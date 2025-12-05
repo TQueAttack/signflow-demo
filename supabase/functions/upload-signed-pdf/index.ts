@@ -24,9 +24,9 @@ serve(async (req) => {
 
     const accountName = Deno.env.get('AZURE_STORAGE_ACCOUNT_NAME');
     const containerName = Deno.env.get('AZURE_STORAGE_CONTAINER_NAME');
-    const apiKey = Deno.env.get('AZURE_STORAGE_API_KEY');
+    const sasToken = Deno.env.get('AZURE_STORAGE_API_KEY'); // SAS token (starts with "sv=" or "?sv=")
 
-    if (!accountName || !containerName || !apiKey) {
+    if (!accountName || !containerName || !sasToken) {
       console.error('Missing Azure configuration');
       return new Response(
         JSON.stringify({ error: 'Azure configuration not found' }),
@@ -41,25 +41,22 @@ serve(async (req) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
 
-    // Azure Blob Storage REST API URL
-    const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${fileName}`;
+    // Ensure SAS token starts with "?" for URL append
+    const sasQueryString = sasToken.startsWith('?') ? sasToken : `?${sasToken}`;
     
-    // Create date strings for Azure authentication
-    const now = new Date();
-    const dateString = now.toUTCString();
+    // Azure Blob Storage REST API URL with SAS token
+    const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${fileName}${sasQueryString}`;
 
-    console.log(`Uploading to Azure Blob: ${blobUrl}`);
+    console.log(`Uploading to Azure Blob: ${accountName}/${containerName}/${fileName}`);
 
-    // Upload using Shared Key authentication
+    // Upload using SAS token authentication (token is in URL)
     const response = await fetch(blobUrl, {
       method: 'PUT',
       headers: {
         'x-ms-blob-type': 'BlockBlob',
-        'x-ms-date': dateString,
         'x-ms-version': '2020-10-02',
         'Content-Type': 'application/pdf',
         'Content-Length': bytes.length.toString(),
-        'Authorization': `SharedKey ${accountName}:${apiKey}`,
       },
       body: bytes,
     });
@@ -73,12 +70,13 @@ serve(async (req) => {
       );
     }
 
+    const publicBlobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${fileName}`;
     console.log(`Successfully uploaded: ${fileName}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        blobUrl,
+        blobUrl: publicBlobUrl,
         fileName 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
