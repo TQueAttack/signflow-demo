@@ -1,19 +1,28 @@
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker for Vite
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.mjs",
-  import.meta.url
-).toString();
+// Disable worker for Unity WebView compatibility
+// Workers often don't work in embedded WebViews
+pdfjsLib.GlobalWorkerOptions.workerSrc = "";
 
 export async function loadPdfDocument(file: File): Promise<pdfjsLib.PDFDocumentProxy> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pdf = await pdfjsLib.getDocument({ 
+    data: arrayBuffer,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true
+  }).promise;
   return pdf;
 }
 
 export async function loadPdfFromUrl(url: string): Promise<pdfjsLib.PDFDocumentProxy> {
-  const pdf = await pdfjsLib.getDocument(url).promise;
+  console.log("Loading PDF from URL (no worker):", url);
+  const pdf = await pdfjsLib.getDocument({ 
+    url,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true
+  }).promise;
   return pdf;
 }
 
