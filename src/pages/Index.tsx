@@ -18,7 +18,8 @@ import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
 // Base URL for absolute URLs (needed for Unity WebView)
-const BASE_URL = "https://ixwarzburtfwatqzkhbb.lovableproject.com";
+// Use the production domain for Unity mode
+const BASE_URL = "https://e-sign-builder.lovable.app";
 
 interface DocumentConfig {
   pdfUrl: string;
