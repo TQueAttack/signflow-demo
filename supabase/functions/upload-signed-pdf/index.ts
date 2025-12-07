@@ -5,30 +5,39 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function insertIntoAzureSQL(fileUrl: string): Promise<void> {
-  const azureFunctionUrl = Deno.env.get('AZURE_SQL_FUNCTION_URL');
+async function updateRestApi(fileUrl: string, proposalRecordId: number): Promise<void> {
+  const restApiUrl = Deno.env.get('REST_API_URL');
+  const bearerToken = Deno.env.get('REST_API_BEARER_TOKEN');
   
-  if (!azureFunctionUrl) {
-    throw new Error('AZURE_SQL_FUNCTION_URL not configured');
+  if (!restApiUrl) {
+    throw new Error('REST_API_URL not configured');
+  }
+  
+  if (!bearerToken) {
+    throw new Error('REST_API_BEARER_TOKEN not configured');
   }
 
-  console.log(`Calling Azure Function to insert file URL: ${fileUrl}`);
+  console.log(`Calling REST API to update signed URL for proposalRecordId: ${proposalRecordId}`);
 
-  const response = await fetch(azureFunctionUrl, {
+  const response = await fetch(restApiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${bearerToken}`,
     },
-    body: JSON.stringify({ fileUrl }),
+    body: JSON.stringify({ 
+      proposalRecordId,
+      url: fileUrl 
+    }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Azure Function failed: ${response.status} - ${errorText}`);
+    throw new Error(`REST API failed: ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
-  console.log('Azure SQL insert result:', result);
+  console.log('REST API update result:', result);
 }
 
 serve(async (req) => {
@@ -38,12 +47,12 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfBase64, fileName } = await req.json();
+    const { pdfBase64, fileName, proposalRecordId } = await req.json();
 
-    if (!pdfBase64 || !fileName) {
-      console.error('Missing required fields: pdfBase64 or fileName');
+    if (!pdfBase64 || !fileName || !proposalRecordId) {
+      console.error('Missing required fields: pdfBase64, fileName, or proposalRecordId');
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: pdfBase64 and fileName' }),
+        JSON.stringify({ error: 'Missing required fields: pdfBase64, fileName, and proposalRecordId' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -99,20 +108,20 @@ serve(async (req) => {
     const publicBlobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${fileName}`;
     console.log(`Successfully uploaded: ${fileName}`);
 
-    // Insert file URL into Azure SQL Database via Azure Function
+    // Update REST API with signed PDF URL
     try {
-      await insertIntoAzureSQL(publicBlobUrl);
-      console.log('Database record created successfully');
-    } catch (dbError) {
-      const dbErrorMsg = dbError instanceof Error ? dbError.message : 'Unknown DB error';
-      console.error(`Failed to insert into Azure SQL: ${dbErrorMsg}`);
-      // Return success for blob upload but note DB failure
+      await updateRestApi(publicBlobUrl, proposalRecordId);
+      console.log('REST API updated successfully');
+    } catch (apiError) {
+      const apiErrorMsg = apiError instanceof Error ? apiError.message : 'Unknown API error';
+      console.error(`Failed to update REST API: ${apiErrorMsg}`);
+      // Return success for blob upload but note API failure
       return new Response(
         JSON.stringify({ 
           success: true, 
           blobUrl: publicBlobUrl,
           fileName,
-          dbError: dbErrorMsg
+          apiError: apiErrorMsg
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -123,7 +132,7 @@ serve(async (req) => {
         success: true, 
         blobUrl: publicBlobUrl,
         fileName,
-        dbInserted: true
+        apiUpdated: true
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
