@@ -64,12 +64,15 @@ const Index = () => {
       try {
         setIsLoadingPdf(true);
         
-        // Fetch the config JSON
-        const response = await fetch(CONFIG_URL);
+        // Fetch the config JSON with cache busting
+        const response = await fetch(`${CONFIG_URL}?t=${Date.now()}`, {
+          cache: 'no-store'
+        });
         if (!response.ok) {
           throw new Error(`Failed to load config: ${response.statusText}`);
         }
         const config: DocumentConfig = await response.json();
+        console.log("Loaded config:", config);
         
         // Load the PDF from URL
         const pdfDoc = await loadPdfFromUrl(config.pdfUrl);
