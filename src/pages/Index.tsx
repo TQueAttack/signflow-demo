@@ -47,6 +47,7 @@ const Index = () => {
   const [consentGiven, setConsentGiven] = useState(isSetupMode);
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
   const [isLoadingPdf, setIsLoadingPdf] = useState(!isSetupMode);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null);
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [savedInitial, setSavedInitial] = useState<string | null>(null);
@@ -63,25 +64,30 @@ const Index = () => {
     const loadConfig = async () => {
       try {
         setIsLoadingPdf(true);
-        console.log("Starting to load config from:", CONFIG_URL);
+        setLoadError(null);
         
-        // Fetch the config JSON with cache busting
+        // Step 1: Fetch config
+        setLoadError("Step 1: Fetching config...");
         const response = await fetch(`${CONFIG_URL}?t=${Date.now()}`, {
           cache: 'no-store'
         });
-        console.log("Config fetch response status:", response.status);
         
         if (!response.ok) {
-          throw new Error(`Failed to load config: ${response.status} ${response.statusText}`);
+          setLoadError(`Config fetch failed: ${response.status} ${response.statusText}`);
+          setIsLoadingPdf(false);
+          return;
         }
-        const config: DocumentConfig = await response.json();
-        console.log("Loaded config:", config);
-        console.log("PDF URL from config:", config.pdfUrl);
         
-        // Load the PDF from URL
-        console.log("Starting PDF load from:", config.pdfUrl);
+        // Step 2: Parse config JSON
+        setLoadError("Step 2: Parsing config...");
+        const config: DocumentConfig = await response.json();
+        
+        // Step 3: Load PDF
+        setLoadError(`Step 3: Loading PDF from ${config.pdfUrl}...`);
         const pdfDoc = await loadPdfFromUrl(config.pdfUrl);
-        console.log("PDF loaded successfully");
+        
+        // Success - clear error
+        setLoadError(null);
         
         // Auto-fill date fields with current date
         const today = new Date();
@@ -97,12 +103,9 @@ const Index = () => {
         
         // Show consent modal for signing mode
         setShowConsentModal(true);
-        
-        console.log(`Loaded PDF with ${pdfDoc.numPages} pages and ${config.fields.length} fields`);
       } catch (error) {
-        console.error("Error loading config:", error);
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error("Full error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setLoadError(`Error: ${errorMessage}`);
         toast.error(`Failed to load document: ${errorMessage}`);
         setIsLoadingPdf(false);
       }
@@ -498,6 +501,18 @@ const Index = () => {
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-lg text-muted-foreground">Loading document...</p>
+            {loadError && (
+              <p className="text-sm text-yellow-600 mt-2 max-w-md text-center bg-yellow-50 p-2 rounded">
+                {loadError}
+              </p>
+            )}
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <p className="text-lg text-destructive mb-2">Failed to load document</p>
+            <p className="text-sm text-muted-foreground max-w-md text-center bg-destructive/10 p-4 rounded">
+              {loadError}
+            </p>
           </div>
         ) : !pdf && isSetupMode ? (
           <div className="max-w-2xl mx-auto">
