@@ -4,6 +4,7 @@ import { PDFDocumentProxy } from "pdfjs-dist";
 import { v4 as uuidv4 } from "uuid";
 import { Header } from "@/components/Header";
 import { PdfViewer } from "@/components/PdfViewer";
+import { ImageViewer } from "@/components/ImageViewer";
 import { SignatureModal } from "@/components/SignatureModal";
 import { ConsentModal } from "@/components/ConsentModal";
 import { CompletionModal } from "@/components/CompletionModal";
@@ -21,8 +22,15 @@ import { toast } from "sonner";
 // Use the production domain for Unity mode
 const BASE_URL = "https://e-sign-builder.lovable.app";
 
+interface PageImage {
+  src: string;
+  width: number;
+  height: number;
+}
+
 interface DocumentConfig {
   pdfUrl: string;
+  pageImages?: PageImage[];
   fields: SignatureField[];
 }
 
@@ -41,6 +49,7 @@ const Index = () => {
   
   const [mode, setMode] = useState<AppMode>(isSetupMode ? "editor" : "signing");
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
+  const [pageImages, setPageImages] = useState<PageImage[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string>("");
   const [pdfFileName, setPdfFileName] = useState<string>("");
   const [fields, setFields] = useState<SignatureField[]>([]);
@@ -92,10 +101,36 @@ const Index = () => {
         const config: DocumentConfig = await configResponse.json();
         console.log('Config loaded:', config);
         
-        // Step 3: Determine PDF URL - always use absolute URL for Unity
+        // Auto-fill date fields with current date
+        const today = new Date();
+        const dateValue = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
+        const fieldsWithDates = config.fields.map(f => 
+          f.type === "date" ? { ...f, isFilled: true, value: dateValue } : f
+        );
+        
+        // Step 3: For Unity mode, use page images instead of PDF.js
+        if (isUnityWebView && config.pageImages && config.pageImages.length > 0) {
+          console.log('Unity mode: Using page images instead of PDF.js');
+          
+          // Convert relative image URLs to absolute for Unity
+          const absolutePageImages = config.pageImages.map(img => ({
+            ...img,
+            src: img.src.startsWith('http') ? img.src : `${BASE_URL}${img.src.startsWith('/') ? '' : '/'}${img.src}`
+          }));
+          
+          console.log('Page images:', absolutePageImages);
+          
+          setPageImages(absolutePageImages);
+          setPdfUrl(config.pdfUrl);
+          setFields(fieldsWithDates);
+          setIsLoadingPdf(false);
+          setShowConsentModal(true);
+          return;
+        }
+        
+        // Step 4: For browsers, use PDF.js as before
         let pdfUrlToLoad = config.pdfUrl;
         if (!config.pdfUrl.startsWith('http')) {
-          // Convert relative URL to absolute
           pdfUrlToLoad = `${BASE_URL}${config.pdfUrl.startsWith('/') ? '' : '/'}${config.pdfUrl}`;
         }
         
@@ -111,25 +146,13 @@ const Index = () => {
         
         console.log('Loading PDF from:', pdfUrlToLoad);
         
-        // Step 4: Load PDF
         const pdfDoc = await loadPdfFromUrl(pdfUrlToLoad);
         
-        // Success - clear error
         setLoadError(null);
-        
-        // Auto-fill date fields with current date
-        const today = new Date();
-        const dateValue = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
-        const fieldsWithDates = config.fields.map(f => 
-          f.type === "date" ? { ...f, isFilled: true, value: dateValue } : f
-        );
-        
         setPdf(pdfDoc);
         setPdfUrl(config.pdfUrl);
         setFields(fieldsWithDates);
         setIsLoadingPdf(false);
-        
-        // Show consent modal for signing mode
         setShowConsentModal(true);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -568,7 +591,7 @@ const Index = () => {
               </Button>
             </div>
           </div>
-        ) : !pdf ? (
+        ) : !pdf && pageImages.length === 0 ? (
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold mb-4">Failed to Load Document</h2>
@@ -599,20 +622,37 @@ const Index = () => {
             )}
 
             <div className="bg-muted/30 rounded-lg p-8">
-              <PdfViewer
-                pdf={pdf}
-                fields={fields}
-                mode={mode}
-                onFieldClick={handleFieldClick}
-                onFieldMove={handleFieldMove}
-                onFieldDelete={handleFieldDelete}
-                onFieldTypeChange={handleFieldTypeChange}
-                onAddField={handleAddField}
-                highlightedFieldId={highlightedFieldId}
-                selectedFieldType={selectedFieldType}
-                hasSavedSignature={savedSignature !== null}
-                hasSavedInitial={savedInitial !== null}
-              />
+              {pageImages.length > 0 ? (
+                <ImageViewer
+                  pageImages={pageImages}
+                  fields={fields}
+                  mode={mode}
+                  onFieldClick={handleFieldClick}
+                  onFieldMove={handleFieldMove}
+                  onFieldDelete={handleFieldDelete}
+                  onFieldTypeChange={handleFieldTypeChange}
+                  onAddField={handleAddField}
+                  highlightedFieldId={highlightedFieldId}
+                  selectedFieldType={selectedFieldType}
+                  hasSavedSignature={savedSignature !== null}
+                  hasSavedInitial={savedInitial !== null}
+                />
+              ) : (
+                <PdfViewer
+                  pdf={pdf}
+                  fields={fields}
+                  mode={mode}
+                  onFieldClick={handleFieldClick}
+                  onFieldMove={handleFieldMove}
+                  onFieldDelete={handleFieldDelete}
+                  onFieldTypeChange={handleFieldTypeChange}
+                  onAddField={handleAddField}
+                  highlightedFieldId={highlightedFieldId}
+                  selectedFieldType={selectedFieldType}
+                  hasSavedSignature={savedSignature !== null}
+                  hasSavedInitial={savedInitial !== null}
+                />
+              )}
             </div>
           </div>
         )}
