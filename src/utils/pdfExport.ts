@@ -7,31 +7,44 @@ export async function generateSignedPdf(
   pdf: PDFDocumentProxy,
   documentLayout: DocumentLayout
 ): Promise<jsPDF> {
+  const scale = 1.5;
+  
+  // Get first page dimensions to initialize the PDF with correct size
+  const firstPage = await pdf.getPage(1);
+  const viewport = firstPage.getViewport({ scale: 1 });
+  const pageWidthPt = viewport.width;
+  const pageHeightPt = viewport.height;
+  
   const doc = new jsPDF({
-    orientation: "portrait",
+    orientation: pageWidthPt > pageHeightPt ? "landscape" : "portrait",
     unit: "pt",
+    format: [pageWidthPt, pageHeightPt],
   });
 
-  const scale = 1.5;
-
   for (let i = 1; i <= pdf.numPages; i++) {
+    // Get this page's dimensions
+    const page = await pdf.getPage(i);
+    const pageViewport = page.getViewport({ scale: 1 });
+    const currentPageWidth = pageViewport.width;
+    const currentPageHeight = pageViewport.height;
+    
     if (i > 1) {
-      doc.addPage();
+      doc.addPage([currentPageWidth, currentPageHeight]);
     }
 
     // Render PDF page to canvas
     const canvas = document.createElement("canvas");
-    const dimensions = await renderPdfPage(pdf, i, canvas, scale);
+    await renderPdfPage(pdf, i, canvas, scale);
 
-    // Add PDF page as image
+    // Add PDF page as image - use actual page dimensions
     const imgData = canvas.toDataURL("image/png");
     doc.addImage(
       imgData,
       "PNG",
       0,
       0,
-      dimensions.width * 0.75, // Convert to PDF points
-      dimensions.height * 0.75
+      currentPageWidth,
+      currentPageHeight
     );
 
     // Add signature overlays for this page
@@ -46,8 +59,8 @@ export async function generateSignedPdf(
         doc.setTextColor(0, 0, 0);
         doc.text(
           field.value,
-          field.x * 0.75 + (field.width * 0.75) / 2,
-          field.y * 0.75 + (field.height * 0.75) / 2,
+          field.x + field.width / 2,
+          field.y + field.height / 2,
           { align: "center", baseline: "middle" }
         );
       } else if (field.value && field.value.startsWith('data:image')) {
@@ -55,10 +68,10 @@ export async function generateSignedPdf(
         doc.addImage(
           field.value,
           "PNG",
-          field.x * 0.75,
-          field.y * 0.75,
-          field.width * 0.75,
-          field.height * 0.75
+          field.x,
+          field.y,
+          field.width,
+          field.height
         );
       }
     }
