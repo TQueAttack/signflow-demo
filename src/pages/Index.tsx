@@ -14,7 +14,7 @@ import { loadPdfDocument, loadPdfFromUrl } from "@/utils/pdfUtils";
 import { saveLayout, loadLayout } from "@/utils/layoutUtils";
 import { exportSignedPdf, getSignedPdfBase64 } from "@/utils/pdfExport";
 import { supabase } from "@/integrations/supabase/client";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
 // Hardcoded config URL - change this to your hosted JSON file
@@ -31,17 +31,22 @@ const Index = () => {
     const id = searchParams.get('proposalRecordId');
     return id ? parseInt(id, 10) : null;
   }, [searchParams]);
-  const [mode, setMode] = useState<AppMode>("signing");
+  
+  // Setup mode allows uploading PDF and configuring fields
+  const isSetupMode = searchParams.get('setup') === 'true';
+  
+  const [mode, setMode] = useState<AppMode>(isSetupMode ? "editor" : "signing");
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [pdfFileName, setPdfFileName] = useState<string>("");
   const [fields, setFields] = useState<SignatureField[]>([]);
   const [currentField, setCurrentField] = useState<SignatureField | null>(null);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [consentGiven, setConsentGiven] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(isSetupMode);
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
-  const [isLoadingPdf, setIsLoadingPdf] = useState(true);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(!isSetupMode);
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null);
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [savedInitial, setSavedInitial] = useState<string | null>(null);
@@ -51,8 +56,10 @@ const Index = () => {
   const [signerFirstName] = useState<string>("");
   const [signerLastName] = useState<string>("");
 
-  // Load config and PDF on mount
+  // Load config and PDF on mount (only in normal mode, not setup mode)
   useEffect(() => {
+    if (isSetupMode) return; // Skip loading config in setup mode
+    
     const loadConfig = async () => {
       try {
         setIsLoadingPdf(true);
@@ -90,7 +97,7 @@ const Index = () => {
     };
     
     loadConfig();
-  }, []);
+  }, [isSetupMode]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -113,13 +120,44 @@ const Index = () => {
       
       setPdf(pdfDoc);
       setPdfUrl(URL.createObjectURL(file));
-      toast.success(`PDF loaded! ${pdfDoc.numPages} page(s)`);
+      setPdfFileName(file.name);
+      setFields([]);
+      toast.success(`PDF loaded! ${pdfDoc.numPages} page(s). Now add your signature fields.`);
     } catch (error) {
       console.error("Error loading PDF:", error);
       toast.error(`Failed to load PDF: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsLoadingPdf(false);
     }
+  };
+
+  const handleExportConfig = () => {
+    // Create config with placeholder PDF URL that user will update
+    const config: DocumentConfig = {
+      pdfUrl: `/documents/${pdfFileName || 'your-document.pdf'}`,
+      fields: fields.map(f => ({
+        id: f.id,
+        type: f.type,
+        page: f.page,
+        x: f.x,
+        y: f.y,
+        width: f.width,
+        height: f.height,
+        isFilled: false
+      }))
+    };
+    
+    const json = JSON.stringify(config, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "document-config.json";
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast.success("Config exported! Update the pdfUrl to match your hosted PDF location.");
+    console.log("Exported config:", json);
   };
 
   const handleAddField = (x: number, y: number, page: number, type: FieldType) => {
@@ -447,6 +485,31 @@ const Index = () => {
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-lg text-muted-foreground">Loading document...</p>
           </div>
+        ) : !pdf && isSetupMode ? (
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-4">Setup Mode</h2>
+              <p className="text-muted-foreground">
+                Upload your PDF to configure signature fields
+              </p>
+            </div>
+            <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
+              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button 
+                onClick={() => fileInputRef.current?.click()} 
+                size="lg"
+              >
+                Choose PDF File
+              </Button>
+            </div>
+          </div>
         ) : !pdf ? (
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
@@ -460,12 +523,20 @@ const Index = () => {
           <div className="space-y-6">
             {mode === "editor" && (
               <div className="sticky top-20 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b pb-4 shadow-sm">
-                <EditorToolbar
-                  onSave={handleSaveLayout}
-                  onLoadLayout={handleLoadLayout}
-                  selectedFieldType={selectedFieldType}
-                  onFieldTypeSelect={setSelectedFieldType}
-                />
+                <div className="flex items-center justify-between">
+                  <EditorToolbar
+                    onSave={handleSaveLayout}
+                    onLoadLayout={handleLoadLayout}
+                    selectedFieldType={selectedFieldType}
+                    onFieldTypeSelect={setSelectedFieldType}
+                  />
+                  {isSetupMode && fields.length > 0 && (
+                    <Button onClick={handleExportConfig} className="ml-4">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Config
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
