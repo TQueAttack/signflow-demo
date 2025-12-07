@@ -500,12 +500,8 @@ const Index = () => {
     setShowCompletionModal(true);
     
     // Send postMessage to parent (for Unity iframe integration)
-    const completionData: CompletionData = {
-      status: "completed",
-      documentLayout: { pdfUrl, fields },
-      timestamp: new Date().toISOString(),
-    };
-    window.parent.postMessage(completionData, "*");
+    // Unity WebView listens for eventArgs.Value == "DocumentsSigned"
+    window.parent.postMessage("DocumentsSigned", "*");
   };
 
   const handleDownloadPdf = async () => {
