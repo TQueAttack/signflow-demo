@@ -18,7 +18,7 @@ import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
 // Hardcoded config URL - change this to your hosted JSON file
-const CONFIG_URL = "/config/document-config.json";
+const CONFIG_URL = "/config/nem/document-config.json";
 
 interface DocumentConfig {
   pdfUrl: string;
