@@ -63,19 +63,25 @@ const Index = () => {
     const loadConfig = async () => {
       try {
         setIsLoadingPdf(true);
+        console.log("Starting to load config from:", CONFIG_URL);
         
         // Fetch the config JSON with cache busting
         const response = await fetch(`${CONFIG_URL}?t=${Date.now()}`, {
           cache: 'no-store'
         });
+        console.log("Config fetch response status:", response.status);
+        
         if (!response.ok) {
-          throw new Error(`Failed to load config: ${response.statusText}`);
+          throw new Error(`Failed to load config: ${response.status} ${response.statusText}`);
         }
         const config: DocumentConfig = await response.json();
         console.log("Loaded config:", config);
+        console.log("PDF URL from config:", config.pdfUrl);
         
         // Load the PDF from URL
+        console.log("Starting PDF load from:", config.pdfUrl);
         const pdfDoc = await loadPdfFromUrl(config.pdfUrl);
+        console.log("PDF loaded successfully");
         
         // Auto-fill date fields with current date
         const today = new Date();
@@ -95,7 +101,9 @@ const Index = () => {
         console.log(`Loaded PDF with ${pdfDoc.numPages} pages and ${config.fields.length} fields`);
       } catch (error) {
         console.error("Error loading config:", error);
-        toast.error(`Failed to load document: ${error instanceof Error ? error.message : "Unknown error"}`);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.error("Full error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        toast.error(`Failed to load document: ${errorMessage}`);
         setIsLoadingPdf(false);
       }
     };
