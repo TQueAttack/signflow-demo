@@ -68,36 +68,39 @@ const Index = () => {
       try {
         setIsLoadingPdf(true);
         setLoadError(null);
+        
         // Step 1: Fetch config
         // Unity WebView requires absolute URLs, browsers work with relative
-        setLoadError("Step 1: Fetching config...");
-        
         const configUrl = isUnityWebView 
           ? `${BASE_URL}/config/document-config.json?t=${Date.now()}`
           : `/config/document-config.json?t=${Date.now()}`;
         
+        console.log('Loading config from:', configUrl, 'isUnityWebView:', isUnityWebView);
+        
         const configResponse = await fetch(configUrl);
         if (!configResponse.ok) {
-          setLoadError(`Config fetch failed: ${configResponse.status}`);
-          setIsLoadingPdf(false);
-          return;
+          throw new Error(`Config fetch failed: ${configResponse.status} ${configResponse.statusText}`);
         }
         
         // Step 2: Parse config JSON
-        setLoadError("Step 2: Parsing config...");
         const config: DocumentConfig = await configResponse.json();
+        console.log('Config loaded:', config);
         
         // Step 3: Determine PDF URL
         // Unity needs absolute URL, browsers need relative for same-origin
         let pdfUrlToLoad = config.pdfUrl;
-        if (!isUnityWebView && config.pdfUrl.includes('lovableproject.com')) {
+        if (isUnityWebView && !config.pdfUrl.startsWith('http')) {
+          // Convert relative URL to absolute for Unity
+          pdfUrlToLoad = `${BASE_URL}${config.pdfUrl.startsWith('/') ? '' : '/'}${config.pdfUrl}`;
+        } else if (!isUnityWebView && config.pdfUrl.includes('lovableproject.com')) {
           // Convert absolute URL to relative for same-origin loading in browser
           const urlPath = new URL(config.pdfUrl).pathname;
           pdfUrlToLoad = urlPath;
         }
         
+        console.log('Loading PDF from:', pdfUrlToLoad);
+        
         // Step 4: Load PDF
-        setLoadError(`Step 3: Loading PDF from ${pdfUrlToLoad}...`);
         const pdfDoc = await loadPdfFromUrl(pdfUrlToLoad);
         
         // Success - clear error
@@ -119,14 +122,15 @@ const Index = () => {
         setShowConsentModal(true);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        setLoadError(`Error: ${errorMessage}`);
+        console.error('Failed to load document:', errorMessage);
+        setLoadError(errorMessage);
         toast.error(`Failed to load document: ${errorMessage}`);
         setIsLoadingPdf(false);
       }
     };
     
     loadConfig();
-  }, [isSetupMode]);
+  }, [isSetupMode, isUnityWebView]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
