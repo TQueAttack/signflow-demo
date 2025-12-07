@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PDFDocumentProxy } from "pdfjs-dist";
 import { v4 as uuidv4 } from "uuid";
@@ -10,12 +10,20 @@ import { CompletionModal } from "@/components/CompletionModal";
 import { EditorToolbar } from "@/components/EditorToolbar";
 import { Button } from "@/components/ui/button";
 import { AppMode, SignatureField, DocumentLayout, CompletionData, FieldType } from "@/types/document";
-import { loadPdfDocument } from "@/utils/pdfUtils";
+import { loadPdfDocument, loadPdfFromUrl } from "@/utils/pdfUtils";
 import { saveLayout, loadLayout } from "@/utils/layoutUtils";
 import { exportSignedPdf, getSignedPdfBase64 } from "@/utils/pdfExport";
 import { supabase } from "@/integrations/supabase/client";
-import { Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
+// Hardcoded config URL - change this to your hosted JSON file
+const CONFIG_URL = "/config/document-config.json";
+
+interface DocumentConfig {
+  pdfUrl: string;
+  fields: SignatureField[];
+}
 
 const Index = () => {
   const [searchParams] = useSearchParams();
@@ -23,7 +31,7 @@ const Index = () => {
     const id = searchParams.get('proposalRecordId');
     return id ? parseInt(id, 10) : null;
   }, [searchParams]);
-  const [mode, setMode] = useState<AppMode>("editor");
+  const [mode, setMode] = useState<AppMode>("signing");
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
   const [fields, setFields] = useState<SignatureField[]>([]);
@@ -33,16 +41,56 @@ const Index = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
-  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(true);
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null);
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [savedInitial, setSavedInitial] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
   // TODO: Replace these with data from your server
-  // Example: Pass firstName and lastName from your backend API
   const [signerFirstName] = useState<string>("");
   const [signerLastName] = useState<string>("");
+
+  // Load config and PDF on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        setIsLoadingPdf(true);
+        
+        // Fetch the config JSON
+        const response = await fetch(CONFIG_URL);
+        if (!response.ok) {
+          throw new Error(`Failed to load config: ${response.statusText}`);
+        }
+        const config: DocumentConfig = await response.json();
+        
+        // Load the PDF from URL
+        const pdfDoc = await loadPdfFromUrl(config.pdfUrl);
+        
+        // Auto-fill date fields with current date
+        const today = new Date();
+        const dateValue = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
+        const fieldsWithDates = config.fields.map(f => 
+          f.type === "date" ? { ...f, isFilled: true, value: dateValue } : f
+        );
+        
+        setPdf(pdfDoc);
+        setPdfUrl(config.pdfUrl);
+        setFields(fieldsWithDates);
+        
+        // Show consent modal for signing mode
+        setShowConsentModal(true);
+        
+        console.log(`Loaded PDF with ${pdfDoc.numPages} pages and ${config.fields.length} fields`);
+      } catch (error) {
+        console.error("Error loading config:", error);
+        toast.error(`Failed to load document: ${error instanceof Error ? error.message : "Unknown error"}`);
+        setIsLoadingPdf(false);
+      }
+    };
+    
+    loadConfig();
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -394,31 +442,18 @@ const Index = () => {
       />
 
       <main className="container mx-auto px-4 py-8">
-        {!pdf ? (
+        {isLoadingPdf ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-lg text-muted-foreground">Loading document...</p>
+          </div>
+        ) : !pdf ? (
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold mb-4">Upload a PDF to Get Started</h2>
+              <h2 className="text-3xl font-bold mb-4">Failed to Load Document</h2>
               <p className="text-muted-foreground">
-                Upload a document to add signature fields or sign an existing document
+                Please check the configuration and try again.
               </p>
-            </div>
-            <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
-              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={isLoadingPdf}
-              />
-              <Button 
-                onClick={() => fileInputRef.current?.click()} 
-                size="lg"
-                disabled={isLoadingPdf}
-              >
-                {isLoadingPdf ? "Loading PDF..." : "Choose PDF File"}
-              </Button>
             </div>
           </div>
         ) : (
