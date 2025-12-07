@@ -17,26 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
-// Config URL - try relative first for same-origin, with absolute fallback
+// Config URLs
 const CONFIG_URL_RELATIVE = "/config/document-config.json";
 const CONFIG_URL_ABSOLUTE = "https://ixwarzburtfwatqzkhbb.lovableproject.com/config/document-config.json";
-
-// Helper to fetch with XMLHttpRequest (better WebView compatibility)
-const fetchWithXHR = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(xhr.responseText);
-      } else {
-        reject(new Error(`XHR failed: ${xhr.status} ${xhr.statusText}`));
-      }
-    };
-    xhr.onerror = () => reject(new Error('XHR network error'));
-    xhr.send();
-  });
-};
 
 interface DocumentConfig {
   pdfUrl: string;
@@ -83,24 +66,38 @@ const Index = () => {
       try {
         setIsLoadingPdf(true);
         setLoadError(null);
-        
-        // Step 1: Fetch config - try relative URL first, then absolute, using XHR for better WebView compatibility
+        // Step 1: Fetch config - try relative URL first, then absolute
         setLoadError("Step 1: Fetching config...");
         
-        let configText: string;
+        let configText: string | null = null;
+        
+        // Try relative URL first
         try {
-          // Try relative URL first (works in same-origin browser)
-          configText = await fetchWithXHR(CONFIG_URL_RELATIVE + `?t=${Date.now()}`);
-        } catch (relativeError) {
+          const resp1 = await fetch(CONFIG_URL_RELATIVE + "?t=" + Date.now());
+          if (resp1.ok) {
+            configText = await resp1.text();
+          }
+        } catch (e) {
+          // Ignore, try absolute
+        }
+        
+        // If relative failed, try absolute
+        if (!configText) {
           setLoadError("Step 1b: Trying absolute URL...");
           try {
-            // Fall back to absolute URL
-            configText = await fetchWithXHR(CONFIG_URL_ABSOLUTE + `?t=${Date.now()}`);
-          } catch (absoluteError) {
-            setLoadError(`Config fetch failed: ${absoluteError instanceof Error ? absoluteError.message : 'Unknown error'}`);
-            setIsLoadingPdf(false);
-            return;
+            const resp2 = await fetch(CONFIG_URL_ABSOLUTE + "?t=" + Date.now());
+            if (resp2.ok) {
+              configText = await resp2.text();
+            }
+          } catch (e) {
+            // Both failed
           }
+        }
+        
+        if (!configText) {
+          setLoadError("Config fetch failed: Could not load from relative or absolute URL");
+          setIsLoadingPdf(false);
+          return;
         }
         
         // Step 2: Parse config JSON
