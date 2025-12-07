@@ -133,6 +133,9 @@ const Index = () => {
   };
 
   const handleExportConfig = () => {
+    console.log("Current fields state:", fields);
+    console.log("Number of fields:", fields.length);
+    
     // Create config with placeholder PDF URL that user will update
     const config: DocumentConfig = {
       pdfUrl: `/documents/${pdfFileName || 'your-document.pdf'}`,
@@ -156,7 +159,6 @@ const Index = () => {
     link.download = "document-config.json";
     link.click();
     URL.revokeObjectURL(url);
-    
     toast.success("Config exported! Update the pdfUrl to match your hosted PDF location.");
     console.log("Exported config:", json);
   };
