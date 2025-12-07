@@ -79,10 +79,11 @@ serve(async (req) => {
     // Ensure SAS token starts with "?" for URL append
     const sasQueryString = sasToken.startsWith('?') ? sasToken : `?${sasToken}`;
     
-    // Azure Blob Storage REST API URL with SAS token
-    const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${fileName}${sasQueryString}`;
+    // Azure Blob Storage REST API URL with SAS token (saving to "nem" subfolder)
+    const blobPath = `nem/${fileName}`;
+    const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobPath}${sasQueryString}`;
 
-    console.log(`Uploading to Azure Blob: ${accountName}/${containerName}/${fileName}`);
+    console.log(`Uploading to Azure Blob: ${accountName}/${containerName}/${blobPath}`);
 
     // Upload using SAS token authentication
     const response = await fetch(blobUrl, {
@@ -105,8 +106,8 @@ serve(async (req) => {
       );
     }
 
-    const publicBlobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${fileName}`;
-    console.log(`Successfully uploaded: ${fileName}`);
+    const publicBlobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobPath}`;
+    console.log(`Successfully uploaded: ${blobPath}`);
 
     // Update REST API with signed PDF URL
     try {
