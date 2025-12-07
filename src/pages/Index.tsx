@@ -84,6 +84,7 @@ const Index = () => {
         setPdf(pdfDoc);
         setPdfUrl(config.pdfUrl);
         setFields(fieldsWithDates);
+        setIsLoadingPdf(false);
         
         // Show consent modal for signing mode
         setShowConsentModal(true);
