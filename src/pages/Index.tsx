@@ -78,7 +78,12 @@ const Index = () => {
         
         console.log('Loading config from:', configUrl, 'isUnityWebView:', isUnityWebView);
         
-        const configResponse = await fetch(configUrl);
+        const configResponse = await fetch(configUrl, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-cache',
+        });
+        
         if (!configResponse.ok) {
           throw new Error(`Config fetch failed: ${configResponse.status} ${configResponse.statusText}`);
         }
@@ -87,16 +92,21 @@ const Index = () => {
         const config: DocumentConfig = await configResponse.json();
         console.log('Config loaded:', config);
         
-        // Step 3: Determine PDF URL
-        // Unity needs absolute URL, browsers need relative for same-origin
+        // Step 3: Determine PDF URL - always use absolute URL for Unity
         let pdfUrlToLoad = config.pdfUrl;
-        if (isUnityWebView && !config.pdfUrl.startsWith('http')) {
-          // Convert relative URL to absolute for Unity
+        if (!config.pdfUrl.startsWith('http')) {
+          // Convert relative URL to absolute
           pdfUrlToLoad = `${BASE_URL}${config.pdfUrl.startsWith('/') ? '' : '/'}${config.pdfUrl}`;
-        } else if (!isUnityWebView && config.pdfUrl.includes('lovableproject.com')) {
-          // Convert absolute URL to relative for same-origin loading in browser
-          const urlPath = new URL(config.pdfUrl).pathname;
-          pdfUrlToLoad = urlPath;
+        }
+        
+        // For browser (non-Unity), try relative path first for same-origin
+        if (!isUnityWebView) {
+          if (config.pdfUrl.startsWith('/')) {
+            pdfUrlToLoad = config.pdfUrl;
+          } else if (config.pdfUrl.includes('lovableproject.com') || config.pdfUrl.includes('lovable.app')) {
+            const urlPath = new URL(config.pdfUrl).pathname;
+            pdfUrlToLoad = urlPath;
+          }
         }
         
         console.log('Loading PDF from:', pdfUrlToLoad);
