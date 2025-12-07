@@ -17,8 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
-// Hardcoded config URL - change this to your hosted JSON file
-const CONFIG_URL = "/config/document-config.json";
+// Hardcoded config URL - using absolute URL for Unity WebView compatibility
+const CONFIG_URL = "https://ixwarzburtfwatqzkhbb.lovableproject.com/config/document-config.json";
 
 interface DocumentConfig {
   pdfUrl: string;
