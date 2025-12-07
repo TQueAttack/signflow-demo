@@ -17,9 +17,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
-// Config URLs
-const CONFIG_URL_RELATIVE = "/config/document-config.json";
-const CONFIG_URL_ABSOLUTE = "https://ixwarzburtfwatqzkhbb.lovableproject.com/config/document-config.json";
 
 interface DocumentConfig {
   pdfUrl: string;
@@ -66,47 +63,32 @@ const Index = () => {
       try {
         setIsLoadingPdf(true);
         setLoadError(null);
-        // Step 1: Fetch config - try relative URL first, then absolute
+        // Step 1: Fetch config using relative URL
         setLoadError("Step 1: Fetching config...");
         
-        let configText: string | null = null;
-        
-        // Try relative URL first
-        try {
-          const resp1 = await fetch(CONFIG_URL_RELATIVE + "?t=" + Date.now());
-          if (resp1.ok) {
-            configText = await resp1.text();
-          }
-        } catch (e) {
-          // Ignore, try absolute
-        }
-        
-        // If relative failed, try absolute
-        if (!configText) {
-          setLoadError("Step 1b: Trying absolute URL...");
-          try {
-            const resp2 = await fetch(CONFIG_URL_ABSOLUTE + "?t=" + Date.now());
-            if (resp2.ok) {
-              configText = await resp2.text();
-            }
-          } catch (e) {
-            // Both failed
-          }
-        }
-        
-        if (!configText) {
-          setLoadError("Config fetch failed: Could not load from relative or absolute URL");
+        const configResponse = await fetch("/config/document-config.json?t=" + Date.now());
+        if (!configResponse.ok) {
+          setLoadError(`Config fetch failed: ${configResponse.status}`);
           setIsLoadingPdf(false);
           return;
         }
         
         // Step 2: Parse config JSON
         setLoadError("Step 2: Parsing config...");
-        const config: DocumentConfig = JSON.parse(configText);
+        const config: DocumentConfig = await configResponse.json();
+        
+        // Step 3: Load PDF - use relative URL for same-origin
+        // Extract the path from the absolute URL in config, or use it directly if relative
+        let pdfUrlToLoad = config.pdfUrl;
+        if (config.pdfUrl.includes('lovableproject.com')) {
+          // Convert absolute URL to relative for same-origin loading
+          const urlPath = new URL(config.pdfUrl).pathname;
+          pdfUrlToLoad = urlPath;
+        }
         
         // Step 3: Load PDF
-        setLoadError(`Step 3: Loading PDF from ${config.pdfUrl}...`);
-        const pdfDoc = await loadPdfFromUrl(config.pdfUrl);
+        setLoadError(`Step 3: Loading PDF from ${pdfUrlToLoad}...`);
+        const pdfDoc = await loadPdfFromUrl(pdfUrlToLoad);
         
         // Success - clear error
         setLoadError(null);
