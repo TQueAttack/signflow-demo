@@ -1,8 +1,20 @@
 import * as pdfjsLib from "pdfjs-dist";
 
-// Disable worker for Unity WebView compatibility
-// Workers often don't work in embedded WebViews
-pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+// Detect if running in Unity WebView (check for Unity-specific user agent or embedded context)
+const isUnityWebView = typeof window !== 'undefined' && (
+  navigator.userAgent.includes('Unity') || 
+  window.parent !== window // embedded in iframe
+);
+
+// Configure PDF.js worker - use worker for browsers, disable for Unity WebView
+if (isUnityWebView) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+} else {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.mjs",
+    import.meta.url
+  ).toString();
+}
 
 export async function loadPdfDocument(file: File): Promise<pdfjsLib.PDFDocumentProxy> {
   const arrayBuffer = await file.arrayBuffer();
