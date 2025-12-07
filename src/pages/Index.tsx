@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PDFDocumentProxy } from "pdfjs-dist";
 import { v4 as uuidv4 } from "uuid";
 import { Header } from "@/components/Header";
@@ -17,6 +18,11 @@ import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
+  const proposalRecordId = useMemo(() => {
+    const id = searchParams.get('proposalRecordId');
+    return id ? parseInt(id, 10) : null;
+  }, [searchParams]);
   const [mode, setMode] = useState<AppMode>("editor");
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
@@ -305,6 +311,12 @@ const Index = () => {
   const handleComplete = async () => {
     if (!pdf) return;
     
+    if (!proposalRecordId) {
+      toast.error('Missing proposalRecordId in URL');
+      console.error('proposalRecordId is required but not found in URL parameters');
+      return;
+    }
+    
     setIsProcessing(true);
     
     try {
@@ -313,7 +325,7 @@ const Index = () => {
       const fileName = `signed-document-${Date.now()}.pdf`;
       
       const { data, error } = await supabase.functions.invoke('upload-signed-pdf', {
-        body: { pdfBase64, fileName }
+        body: { pdfBase64, fileName, proposalRecordId }
       });
       
       if (error) {
