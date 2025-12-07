@@ -1,4 +1,45 @@
 {
   "pdfUrl": "/documents/nem.pdf",
-  "fields": []
+  "fields": [
+    {
+      "id": "8214312d-dcd7-4575-9958-d8e7d84810fc",
+      "type": "initial",
+      "page": 1,
+      "x": 400.5,
+      "y": 1033,
+      "width": 120,
+      "height": 40,
+      "isFilled": false
+    },
+    {
+      "id": "aadd9509-6e32-4c8b-860e-af96fad48c67",
+      "type": "initial",
+      "page": 3,
+      "x": 664.5,
+      "y": 1028,
+      "width": 120,
+      "height": 40,
+      "isFilled": false
+    },
+    {
+      "id": "b3a4d850-b738-4121-8c7d-247ec342ab08",
+      "type": "signature",
+      "page": 7,
+      "x": 347.5,
+      "y": 787,
+      "width": 180,
+      "height": 50,
+      "isFilled": false
+    },
+    {
+      "id": "8836d3eb-e992-4c63-9a2a-1b271a0ca773",
+      "type": "date",
+      "page": 7,
+      "x": 355.5,
+      "y": 913,
+      "width": 150,
+      "height": 35,
+      "isFilled": false
+    }
+  ]
 }
