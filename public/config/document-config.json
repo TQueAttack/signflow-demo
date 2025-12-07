@@ -1,5 +1,14 @@
 {
   "pdfUrl": "/documents/nem.pdf",
+  "pageImages": [
+    { "src": "/documents/nem-page-1.png", "width": 612, "height": 792 },
+    { "src": "/documents/nem-page-2.png", "width": 612, "height": 792 },
+    { "src": "/documents/nem-page-3.png", "width": 612, "height": 792 },
+    { "src": "/documents/nem-page-4.png", "width": 612, "height": 792 },
+    { "src": "/documents/nem-page-5.png", "width": 612, "height": 792 },
+    { "src": "/documents/nem-page-6.png", "width": 612, "height": 792 },
+    { "src": "/documents/nem-page-7.png", "width": 612, "height": 792 }
+  ],
   "fields": [
     {
       "id": "8214312d-dcd7-4575-9958-d8e7d84810fc",
