@@ -17,9 +17,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
-// Detect Unity WebView - Unity adds "Unity" to user agent
-const isUnityWebView = typeof window !== 'undefined' && navigator.userAgent.includes('Unity');
-
 // Base URL for absolute URLs (needed for Unity WebView)
 const BASE_URL = "https://ixwarzburtfwatqzkhbb.lovableproject.com";
 
@@ -37,6 +34,9 @@ const Index = () => {
   
   // Setup mode allows uploading PDF and configuring fields
   const isSetupMode = searchParams.get('setup') === 'true';
+  
+  // Unity mode - use URL param ?unity=true since Unity WebView user agent is unreliable
+  const isUnityWebView = searchParams.get('unity') === 'true';
   
   const [mode, setMode] = useState<AppMode>(isSetupMode ? "editor" : "signing");
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
