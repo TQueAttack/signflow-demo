@@ -17,6 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
+// Detect Unity WebView - Unity adds "Unity" to user agent
+const isUnityWebView = typeof window !== 'undefined' && navigator.userAgent.includes('Unity');
+
+// Base URL for absolute URLs (needed for Unity WebView)
+const BASE_URL = "https://ixwarzburtfwatqzkhbb.lovableproject.com";
 
 interface DocumentConfig {
   pdfUrl: string;
@@ -63,10 +68,15 @@ const Index = () => {
       try {
         setIsLoadingPdf(true);
         setLoadError(null);
-        // Step 1: Fetch config using relative URL
+        // Step 1: Fetch config
+        // Unity WebView requires absolute URLs, browsers work with relative
         setLoadError("Step 1: Fetching config...");
         
-        const configResponse = await fetch("/config/document-config.json?t=" + Date.now());
+        const configUrl = isUnityWebView 
+          ? `${BASE_URL}/config/document-config.json?t=${Date.now()}`
+          : `/config/document-config.json?t=${Date.now()}`;
+        
+        const configResponse = await fetch(configUrl);
         if (!configResponse.ok) {
           setLoadError(`Config fetch failed: ${configResponse.status}`);
           setIsLoadingPdf(false);
@@ -77,16 +87,16 @@ const Index = () => {
         setLoadError("Step 2: Parsing config...");
         const config: DocumentConfig = await configResponse.json();
         
-        // Step 3: Load PDF - use relative URL for same-origin
-        // Extract the path from the absolute URL in config, or use it directly if relative
+        // Step 3: Determine PDF URL
+        // Unity needs absolute URL, browsers need relative for same-origin
         let pdfUrlToLoad = config.pdfUrl;
-        if (config.pdfUrl.includes('lovableproject.com')) {
-          // Convert absolute URL to relative for same-origin loading
+        if (!isUnityWebView && config.pdfUrl.includes('lovableproject.com')) {
+          // Convert absolute URL to relative for same-origin loading in browser
           const urlPath = new URL(config.pdfUrl).pathname;
           pdfUrlToLoad = urlPath;
         }
         
-        // Step 3: Load PDF
+        // Step 4: Load PDF
         setLoadError(`Step 3: Loading PDF from ${pdfUrlToLoad}...`);
         const pdfDoc = await loadPdfFromUrl(pdfUrlToLoad);
         
