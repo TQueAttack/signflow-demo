@@ -486,22 +486,24 @@ const Index = () => {
       if (error) {
         console.error('Upload error:', error);
         toast.error('Failed to upload signed document');
-      } else {
-        console.log('Upload successful:', data);
-        toast.success('Document uploaded successfully');
+        setIsProcessing(false);
+        return;
       }
+      
+      console.log('Upload successful:', data);
+      toast.success('Document uploaded successfully');
+      
+      // Send postMessage to parent (for Unity iframe integration)
+      // Unity WebView listens for eventArgs.Value == "DocumentsSigned"
+      window.parent.postMessage("DocumentsSigned", "*");
+      
+      setShowCompletionModal(true);
     } catch (error) {
       console.error('Error during completion:', error);
       toast.error('Failed to process document');
     } finally {
       setIsProcessing(false);
     }
-    
-    setShowCompletionModal(true);
-    
-    // Send postMessage to parent (for Unity iframe integration)
-    // Unity WebView listens for eventArgs.Value == "DocumentsSigned"
-    window.parent.postMessage("DocumentsSigned", "*");
   };
 
   const handleDownloadPdf = async () => {
