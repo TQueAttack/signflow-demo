@@ -65,6 +65,8 @@ const Index = () => {
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [savedInitial, setSavedInitial] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
   
   // TODO: Replace these with data from your server
   const [signerFirstName] = useState<string>("");
@@ -473,11 +475,18 @@ const Index = () => {
     }
     
     setIsProcessing(true);
+    setUploadProgress(0);
+    setUploadStatus('Preparing document...');
     
     try {
-      // Generate PDF and upload to Azure
+      // Generate PDF
+      setUploadProgress(10);
+      setUploadStatus('Generating PDF...');
       const pdfBase64 = await getSignedPdfBase64(pdf, { pdfUrl, fields });
       const fileName = `signed-document-${Date.now()}.pdf`;
+      
+      setUploadProgress(40);
+      setUploadStatus('Uploading to server...');
       
       const { data, error } = await supabase.functions.invoke('upload-signed-pdf', {
         body: { pdfBase64, fileName, proposalRecordId }
@@ -490,7 +499,13 @@ const Index = () => {
         return;
       }
       
+      setUploadProgress(90);
+      setUploadStatus('Finalizing...');
+      
       console.log('Upload successful:', data);
+      
+      setUploadProgress(100);
+      setUploadStatus('Complete!');
       toast.success('Document uploaded successfully');
       
       // Send postMessage to parent (for Unity iframe integration)
@@ -686,9 +701,21 @@ const Index = () => {
       {/* Blocking overlay while saving */}
       {isProcessing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border shadow-lg">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border shadow-lg min-w-[300px]">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="text-lg font-medium">Saving your signed document...</p>
+            <div className="w-full space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{uploadStatus}</span>
+                <span className="font-medium">{uploadProgress}%</span>
+              </div>
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
             <p className="text-sm text-muted-foreground">Please wait, do not close this page.</p>
           </div>
         </div>
