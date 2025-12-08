@@ -14,6 +14,7 @@ import { AppMode, SignatureField, DocumentLayout, CompletionData, FieldType } fr
 import { loadPdfDocument, loadPdfFromUrl } from "@/utils/pdfUtils";
 import { saveLayout, loadLayout } from "@/utils/layoutUtils";
 import { exportSignedPdf, getSignedPdfBase64 } from "@/utils/pdfExport";
+import { getSignedPdfBase64FromImages } from "@/utils/imageExport";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -466,7 +467,15 @@ const Index = () => {
   };
 
   const handleComplete = async () => {
-    if (!pdf) return;
+    // Check if we have either PDF or page images to generate from
+    const hasPageImages = pageImages.length > 0;
+    const hasPdf = pdf !== null;
+    
+    if (!hasPageImages && !hasPdf) {
+      console.error('No document loaded - neither PDF nor page images available');
+      toast.error('No document loaded');
+      return;
+    }
     
     if (!proposalRecordId) {
       toast.error('Missing proposalRecordId in URL');
@@ -479,11 +488,21 @@ const Index = () => {
     setUploadStatus('Preparing document...');
     
     try {
-      // Generate PDF
+      // Generate PDF - use image-based generation if we have page images, otherwise use PDF.js
       setUploadProgress(10);
       setUploadStatus('Generating PDF...');
-      const pdfBase64 = await getSignedPdfBase64(pdf, { pdfUrl, fields });
+      
+      let pdfBase64: string;
+      if (hasPageImages) {
+        console.log('Generating PDF from page images...');
+        pdfBase64 = await getSignedPdfBase64FromImages(pageImages, { pdfUrl, fields });
+      } else {
+        console.log('Generating PDF from PDF.js document...');
+        pdfBase64 = await getSignedPdfBase64(pdf!, { pdfUrl, fields });
+      }
+      
       const fileName = `signed-document-${Date.now()}.pdf`;
+      console.log('PDF generated, uploading...', { fileName, proposalRecordId });
       
       setUploadProgress(40);
       setUploadStatus('Uploading to server...');
