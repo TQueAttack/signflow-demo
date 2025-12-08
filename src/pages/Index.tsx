@@ -717,25 +717,59 @@ const Index = () => {
         documentLayout={{ pdfUrl, fields }}
       />
 
-      {/* Blocking overlay while saving */}
+      {/* Blocking overlay while saving - using inline styles for Unity WebView compatibility */}
       {isProcessing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border shadow-lg min-w-[300px]">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-lg font-medium">Saving your signed document...</p>
-            <div className="w-full space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{uploadStatus}</span>
-                <span className="font-medium">{uploadProgress}%</span>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          }}
+        >
+          <div 
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+              padding: '32px',
+              borderRadius: '12px',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              minWidth: '320px',
+            }}
+          >
+            <Loader2 className="h-12 w-12 animate-spin" style={{ color: '#2563eb' }} />
+            <p style={{ fontSize: '18px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
+              Saving your signed document...
+            </p>
+            <div style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>{uploadStatus}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: '#1f2937' }}>{uploadProgress}%</span>
               </div>
-              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
                 <div 
-                  className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
-                  style={{ width: `${uploadProgress}%` }}
+                  style={{ 
+                    height: '100%', 
+                    backgroundColor: '#2563eb', 
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease-out',
+                    width: `${uploadProgress}%` 
+                  }}
                 />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">Please wait, do not close this page.</p>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+              Please wait, do not close this page.
+            </p>
           </div>
         </div>
       )}
