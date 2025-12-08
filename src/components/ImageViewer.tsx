@@ -72,18 +72,21 @@ export function ImageViewer({
   return (
     <div className="space-y-6">
       {pageImages.map((page, i) => {
-        const dimensions = loadedDimensions[i] || { width: page.width || 800, height: page.height || 1100 };
+        // Original dimensions from config (used for scaling field positions)
+        const originalWidth = page.width || 612;
+        const originalHeight = page.height || 792;
+        // Actual rendered dimensions
+        const renderedDimensions = loadedDimensions[i] || { width: originalWidth, height: originalHeight };
         
         return (
           <div
             key={i}
             className="relative mx-auto w-fit"
-            style={{ minHeight: dimensions.height }}
           >
             <img
               src={page.src}
               alt={`Page ${i + 1}`}
-              className="shadow-lg border border-border rounded"
+              className="shadow-lg border border-border rounded max-w-full h-auto"
               onLoad={(e) => handleImageLoad(i, e)}
               style={{ display: 'block' }}
             />
@@ -95,8 +98,10 @@ export function ImageViewer({
               onFieldDelete={onFieldDelete}
               onFieldTypeChange={onFieldTypeChange}
               onPageClick={(e) => handlePageClick(e, i)}
-              pageWidth={dimensions.width}
-              pageHeight={dimensions.height}
+              pageWidth={renderedDimensions.width}
+              pageHeight={renderedDimensions.height}
+              originalWidth={originalWidth}
+              originalHeight={originalHeight}
               highlightedFieldId={highlightedFieldId}
               isPlacingField={mode === "editor" && selectedFieldType !== null}
               hasSavedSignature={hasSavedSignature}
