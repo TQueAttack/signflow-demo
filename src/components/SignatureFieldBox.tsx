@@ -25,6 +25,8 @@ interface SignatureFieldBoxProps {
   onTypeChange?: (fieldId: string, type: "signature" | "initial" | "date") => void;
   isHighlighted?: boolean;
   hasSavedValue?: boolean;
+  scaleX?: number;
+  scaleY?: number;
 }
 
 export function SignatureFieldBox({
@@ -36,6 +38,8 @@ export function SignatureFieldBox({
   onTypeChange,
   isHighlighted = false,
   hasSavedValue = false,
+  scaleX = 1,
+  scaleY = 1,
 }: SignatureFieldBoxProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [hasMoved, setHasMoved] = useState(false);
@@ -150,10 +154,10 @@ export function SignatureFieldBox({
         isHighlighted && "ring-4 ring-accent/50 animate-pulse scale-105"
       )}
       style={{
-        left: field.x,
-        top: field.y,
-        width: field.width,
-        height: field.height,
+        left: field.x * scaleX,
+        top: field.y * scaleY,
+        width: field.width * scaleX,
+        height: field.height * scaleY,
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

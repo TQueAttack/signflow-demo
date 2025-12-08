@@ -11,6 +11,8 @@ interface FieldOverlayProps {
   onPageClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   pageWidth: number;
   pageHeight: number;
+  originalWidth?: number;
+  originalHeight?: number;
   highlightedFieldId?: string;
   isPlacingField?: boolean;
   hasSavedSignature?: boolean;
@@ -27,11 +29,17 @@ export function FieldOverlay({
   onPageClick,
   pageWidth,
   pageHeight,
+  originalWidth = 612,
+  originalHeight = 792,
   highlightedFieldId,
   isPlacingField = false,
   hasSavedSignature = false,
   hasSavedInitial = false,
 }: FieldOverlayProps) {
+  // Calculate scale factors for field positioning
+  const scaleX = pageWidth / originalWidth;
+  const scaleY = pageHeight / originalHeight;
+
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Only place field if clicking directly on overlay (not after dragging a field)
     const target = e.target as HTMLElement;
@@ -61,6 +69,8 @@ export function FieldOverlay({
           hasSavedValue={
             field.type === "signature" ? hasSavedSignature : hasSavedInitial
           }
+          scaleX={scaleX}
+          scaleY={scaleY}
         />
       ))}
     </div>
