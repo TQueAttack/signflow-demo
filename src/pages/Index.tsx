@@ -578,6 +578,22 @@ const Index = () => {
   ).length;
   const allFieldsFilled = fields.length > 0 && fields.every((f) => f.isFilled);
 
+  const handleTestPostMessage = () => {
+    console.log('TEST: Sending DocumentsSigned message...');
+    try {
+      window.parent.postMessage("DocumentsSigned", "*");
+      console.log('TEST: postMessage sent to parent');
+    } catch (e) {
+      console.error('TEST: postMessage to parent failed:', e);
+    }
+    try {
+      window.postMessage("DocumentsSigned", "*");
+      console.log('TEST: postMessage sent to window');
+    } catch (e) {
+      console.error('TEST: postMessage to window failed:', e);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header
@@ -592,6 +608,17 @@ const Index = () => {
         hasSavedInitial={savedInitial !== null}
         isProcessing={isProcessing}
       />
+
+      {/* Test button for Unity postMessage debugging */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <Button 
+          onClick={handleTestPostMessage}
+          variant="destructive"
+          size="sm"
+        >
+          Test DocumentsSigned
+        </Button>
+      </div>
 
       <main className="container mx-auto px-4 py-8">
         {isLoadingPdf ? (
