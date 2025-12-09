@@ -529,7 +529,20 @@ const Index = () => {
       
       // Send postMessage to parent (for Unity iframe integration)
       // Unity WebView listens for eventArgs.Value == "DocumentsSigned"
-      window.parent.postMessage("DocumentsSigned", "*");
+      console.log('Sending DocumentsSigned message to Unity...');
+      try {
+        window.parent.postMessage("DocumentsSigned", "*");
+        console.log('postMessage sent to parent');
+      } catch (e) {
+        console.error('postMessage to parent failed:', e);
+      }
+      // Also try window.postMessage as fallback for some WebView implementations
+      try {
+        window.postMessage("DocumentsSigned", "*");
+        console.log('postMessage sent to window');
+      } catch (e) {
+        console.error('postMessage to window failed:', e);
+      }
       
       setShowCompletionModal(true);
     } catch (error) {
