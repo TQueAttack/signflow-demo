@@ -527,21 +527,17 @@ const Index = () => {
       setUploadStatus('Complete!');
       toast.success('Document uploaded successfully');
       
-      // Send postMessage to parent (for Unity iframe integration)
-      // Unity WebView listens for eventArgs.Value == "DocumentsSigned"
-      console.log('Sending DocumentsSigned message to Unity...');
+      // Notify Unity that signing is complete via Vuplex
+      console.log('Sending DocumentsSigned message to Unity via vuplex...');
       try {
-        window.parent.postMessage("DocumentsSigned", "*");
-        console.log('postMessage sent to parent');
+        if ((window as any).vuplex) {
+          (window as any).vuplex.postMessage('DocumentsSigned');
+          console.log('vuplex.postMessage sent successfully');
+        } else {
+          console.error('window.vuplex is not available');
+        }
       } catch (e) {
-        console.error('postMessage to parent failed:', e);
-      }
-      // Also try window.postMessage as fallback for some WebView implementations
-      try {
-        window.postMessage("DocumentsSigned", "*");
-        console.log('postMessage sent to window');
-      } catch (e) {
-        console.error('postMessage to window failed:', e);
+        console.error('vuplex.postMessage failed:', e);
       }
       
       setShowCompletionModal(true);
@@ -579,18 +575,16 @@ const Index = () => {
   const allFieldsFilled = fields.length > 0 && fields.every((f) => f.isFilled);
 
   const handleTestPostMessage = () => {
-    console.log('TEST: Sending DocumentsSigned message...');
+    console.log('TEST: Sending DocumentsSigned message via vuplex...');
     try {
-      window.parent.postMessage("DocumentsSigned", "*");
-      console.log('TEST: postMessage sent to parent');
+      if ((window as any).vuplex) {
+        (window as any).vuplex.postMessage('DocumentsSigned');
+        console.log('TEST: vuplex.postMessage sent successfully');
+      } else {
+        console.error('TEST: window.vuplex is not available');
+      }
     } catch (e) {
-      console.error('TEST: postMessage to parent failed:', e);
-    }
-    try {
-      window.postMessage("DocumentsSigned", "*");
-      console.log('TEST: postMessage sent to window');
-    } catch (e) {
-      console.error('TEST: postMessage to window failed:', e);
+      console.error('TEST: vuplex.postMessage failed:', e);
     }
   };
 
