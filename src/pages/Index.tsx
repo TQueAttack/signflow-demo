@@ -501,6 +501,35 @@ const Index = () => {
         pdfBase64 = await getSignedPdfBase64(pdf!, { pdfUrl, fields });
       }
       
+      // Generate thumbnail from first page (1/8 size)
+      setUploadProgress(25);
+      setUploadStatus('Generating thumbnail...');
+      
+      let thumbnailBase64: string | undefined;
+      if (hasPageImages && pageImages.length > 0) {
+        const firstPage = pageImages[0];
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = reject;
+          img.src = firstPage.src;
+        });
+        
+        const thumbWidth = Math.round(firstPage.width / 8);
+        const thumbHeight = Math.round(firstPage.height / 8);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = thumbWidth;
+        canvas.height = thumbHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, thumbWidth, thumbHeight);
+          thumbnailBase64 = canvas.toDataURL('image/png').split(',')[1];
+          console.log('Thumbnail generated:', { thumbWidth, thumbHeight });
+        }
+      }
+      
       const fileName = `signed-document-${Date.now()}.pdf`;
       console.log('PDF generated, uploading...', { fileName, proposalRecordId });
       
@@ -508,7 +537,7 @@ const Index = () => {
       setUploadStatus('Uploading to server...');
       
       const { data, error } = await supabase.functions.invoke('upload-signed-pdf', {
-        body: { pdfBase64, fileName, proposalRecordId }
+        body: { pdfBase64, fileName, proposalRecordId, thumbnailBase64 }
       });
       
       if (error) {

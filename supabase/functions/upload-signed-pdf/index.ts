@@ -40,6 +40,45 @@ async function updateRestApi(fileUrl: string, proposalRecordId: number): Promise
   console.log('REST API update result:', result);
 }
 
+async function uploadToAzure(
+  accountName: string,
+  containerName: string,
+  sasToken: string,
+  blobPath: string,
+  base64Data: string,
+  contentType: string
+): Promise<string> {
+  const sasQueryString = sasToken.startsWith('?') ? sasToken : `?${sasToken}`;
+  const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobPath}${sasQueryString}`;
+
+  console.log(`Uploading to Azure Blob: ${accountName}/${containerName}/${blobPath}`);
+
+  // Convert base64 to binary
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const response = await fetch(blobUrl, {
+    method: 'PUT',
+    headers: {
+      'x-ms-blob-type': 'BlockBlob',
+      'x-ms-version': '2020-10-02',
+      'Content-Type': contentType,
+      'Content-Length': bytes.length.toString(),
+    },
+    body: bytes,
+  } as RequestInit);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Azure upload failed: ${response.status} - ${errorText}`);
+  }
+
+  return `https://${accountName}.blob.core.windows.net/${containerName}/${blobPath}`;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -47,7 +86,7 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfBase64, fileName, proposalRecordId } = await req.json();
+    const { pdfBase64, fileName, proposalRecordId, thumbnailBase64 } = await req.json();
 
     if (!pdfBase64 || !fileName || !proposalRecordId) {
       console.error('Missing required fields: pdfBase64, fileName, or proposalRecordId');
@@ -69,45 +108,19 @@ serve(async (req) => {
       );
     }
 
-    // Convert base64 to binary
-    const binaryString = atob(pdfBase64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    // Upload PDF
+    const pdfBlobPath = `nem/${fileName}`;
+    const publicBlobUrl = await uploadToAzure(accountName, containerName, sasToken, pdfBlobPath, pdfBase64, 'application/pdf');
+    console.log(`Successfully uploaded PDF: ${pdfBlobPath}`);
+
+    // Upload thumbnail if provided
+    let thumbnailUrl: string | undefined;
+    if (thumbnailBase64) {
+      const thumbFileName = fileName.replace('.pdf', '_thumb.png');
+      const thumbBlobPath = `nem/${thumbFileName}`;
+      thumbnailUrl = await uploadToAzure(accountName, containerName, sasToken, thumbBlobPath, thumbnailBase64, 'image/png');
+      console.log(`Successfully uploaded thumbnail: ${thumbBlobPath}`);
     }
-
-    // Ensure SAS token starts with "?" for URL append
-    const sasQueryString = sasToken.startsWith('?') ? sasToken : `?${sasToken}`;
-    
-    // Azure Blob Storage REST API URL with SAS token (saving to "nem" subfolder)
-    const blobPath = `nem/${fileName}`;
-    const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobPath}${sasQueryString}`;
-
-    console.log(`Uploading to Azure Blob: ${accountName}/${containerName}/${blobPath}`);
-
-    // Upload using SAS token authentication
-    const response = await fetch(blobUrl, {
-      method: 'PUT',
-      headers: {
-        'x-ms-blob-type': 'BlockBlob',
-        'x-ms-version': '2020-10-02',
-        'Content-Type': 'application/pdf',
-        'Content-Length': bytes.length.toString(),
-      },
-      body: bytes,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Azure upload failed: ${response.status} - ${errorText}`);
-      return new Response(
-        JSON.stringify({ error: `Azure upload failed: ${response.status}`, details: errorText }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const publicBlobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobPath}`;
-    console.log(`Successfully uploaded: ${blobPath}`);
 
     // Update REST API with signed PDF URL
     try {
@@ -132,6 +145,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         blobUrl: publicBlobUrl,
+        thumbnailUrl,
         fileName,
         apiUpdated: true
       }),
