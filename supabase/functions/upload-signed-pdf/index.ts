@@ -88,6 +88,15 @@ serve(async (req) => {
   try {
     const { pdfBase64, fileName, proposalRecordId, thumbnailBase64 } = await req.json();
 
+    console.log('Received request:', { 
+      fileName, 
+      proposalRecordId, 
+      hasPdfBase64: !!pdfBase64, 
+      pdfBase64Length: pdfBase64?.length,
+      hasThumbnailBase64: !!thumbnailBase64,
+      thumbnailBase64Length: thumbnailBase64?.length 
+    });
+
     if (!pdfBase64 || !fileName || !proposalRecordId) {
       console.error('Missing required fields: pdfBase64, fileName, or proposalRecordId');
       return new Response(

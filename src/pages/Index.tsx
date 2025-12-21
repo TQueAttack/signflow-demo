@@ -507,27 +507,44 @@ const Index = () => {
       
       let thumbnailBase64: string | undefined;
       if (hasPageImages && pageImages.length > 0) {
-        const firstPage = pageImages[0];
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = reject;
-          img.src = firstPage.src;
-        });
-        
-        const thumbWidth = Math.round(firstPage.width / 8);
-        const thumbHeight = Math.round(firstPage.height / 8);
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = thumbWidth;
-        canvas.height = thumbHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, thumbWidth, thumbHeight);
-          thumbnailBase64 = canvas.toDataURL('image/png').split(',')[1];
-          console.log('Thumbnail generated:', { thumbWidth, thumbHeight });
+        try {
+          const firstPage = pageImages[0];
+          console.log('Generating thumbnail from first page:', { src: firstPage.src, width: firstPage.width, height: firstPage.height });
+          
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => {
+              console.log('Image loaded for thumbnail:', { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
+              resolve();
+            };
+            img.onerror = (e) => {
+              console.error('Failed to load image for thumbnail:', e);
+              reject(e);
+            };
+            img.src = firstPage.src;
+          });
+          
+          const thumbWidth = Math.round(firstPage.width / 8);
+          const thumbHeight = Math.round(firstPage.height / 8);
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = thumbWidth;
+          canvas.height = thumbHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, thumbWidth, thumbHeight);
+            thumbnailBase64 = canvas.toDataURL('image/png').split(',')[1];
+            console.log('Thumbnail generated successfully:', { thumbWidth, thumbHeight, base64Length: thumbnailBase64?.length });
+          } else {
+            console.error('Failed to get canvas 2d context');
+          }
+        } catch (thumbError) {
+          console.error('Error generating thumbnail:', thumbError);
+          // Continue without thumbnail
         }
+      } else {
+        console.log('Skipping thumbnail generation:', { hasPageImages, pageImagesLength: pageImages.length });
       }
       
       const fileName = `signed-document-${Date.now()}.pdf`;
